@@ -10,6 +10,16 @@ Researched on 2026-10-04.
 - The MNB tools (minositetthitel.hu, hitelvalaszto.mnb.hu) have no API or download. Reading them would be scraping, which this project does not do
 - Each bank file in `packages/core/src/banks/` exports hand-maintained static rates with an `asOf` date and a source URL. Refresh them from the bank's lakáshitel hirdetmény
 
+## How comparison sites get rates
+
+Sites like Bankmonitor (<https://bankmonitor.hu/lakashitel-kalkulator/>), Bank360 and money.hu are licensed credit intermediaries. They keep their own product database, which they say is updated daily from the banks' public hirdetmény documents and backed by commission agreements with the banks. Their calculators call a private backend, not a public API, so using it would be scraping.
+
+Ways to get fresher data without scraping:
+
+- Data partnership: ask an intermediary (Bankmonitor, Bank360, money.hu) or the banks for a licensed feed
+- Hirdetmény parsing: banks must publish these PDFs, a scheduled CI job could parse them into the bank files (borderline, needs an explicit decision)
+- Until then: hand-maintained defaults that users can override in the app
+
 ## Per-bank API status
 
 | Bank       | API            | Portal                                    | Auth                                | Mortgage data                                                                   |
