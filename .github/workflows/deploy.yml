@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Monthly rebuild keeps the prerendered default start month current.
+  schedule:
+    - cron: '0 3 1 * *'
 
 permissions:
   contents: read
