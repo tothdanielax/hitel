@@ -46,6 +46,14 @@ export const AssumptionsBlock = ({ form }: Props) => {
           </form.AppField>
         ))}
       </div>
+      <form.AppField name='settings.babavaroAsDownPayment'>
+        {(field) => (
+          <field.SwitchField
+            label='Babaváró önerőként'
+            description='Sok bank elfogadja, de bankfüggő. Kikapcsolva a kötelező önerőt saját pénzből kell fedezni.'
+          />
+        )}
+      </form.AppField>
       <form.AppField name='settings.keepOwnFunds'>
         {(field) => (
           <field.SwitchField

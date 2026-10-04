@@ -4,6 +4,7 @@ import { createFormHook, useStore } from '@tanstack/react-form';
 import { useRouter } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { CheckboxField } from '../components/checkbox-field';
+import { CheckboxListField } from '../components/checkbox-list-field';
 import { ChoiceField } from '../components/choice-field';
 import { MonthField } from '../components/month-field';
 import { MonthListField } from '../components/month-list-field';
@@ -18,6 +19,7 @@ const { useAppForm } = createFormHook({
   formContext,
   fieldComponents: {
     CheckboxField,
+    CheckboxListField,
     ChoiceField,
     MonthField,
     MonthListField,

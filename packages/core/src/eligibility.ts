@@ -1,6 +1,7 @@
 import {
   BABAVARO,
   CSOK_PLUSZ,
+  EXCLUDABLE_PROGRAMS,
   FALUSI_CSOK,
   FALUSI_CSOK_LOAN,
   GOV_PROGRAM,
@@ -26,6 +27,8 @@ export type HouseholdInput = {
   insuredYears: number;
   firstHome: boolean;
   cleanRecord: boolean;
+  // Already used (most programs are once per person or couple) or not wanted.
+  excludedPrograms: GovProgram[];
   pregnant: boolean;
   childrenBirthMonths: string[];
   plannedChildrenMonths: string[];
@@ -61,6 +64,9 @@ export const normalizeInput = (input: HouseholdInput): HouseholdInput => {
       (month) => monthsBetween(input.startMonth, month) >= 0
     ),
     renovationBudget: Math.max(0, input.renovationBudget || 0),
+    excludedPrograms: (input.excludedPrograms ?? []).filter((program) =>
+      EXCLUDABLE_PROGRAMS.includes(program)
+    ),
     termYears: Math.min(TERM_YEARS.max, Math.max(TERM_YEARS.min, input.termYears || TERM_YEARS.min))
   };
 };
@@ -72,7 +78,18 @@ export const checkEligibility = (input: HouseholdInput): Eligibility[] => {
     babavaro(input),
     falusiCsok(input),
     falusiCsokLoan(input)
-  ];
+  ].map((eligibility) =>
+    input.excludedPrograms.includes(eligibility.program) ? excluded(eligibility) : eligibility
+  );
+};
+
+const excluded = (eligibility: Eligibility): Eligibility => {
+  return {
+    ...eligibility,
+    eligible: false,
+    maxAmount: 0,
+    reasons: ['Kizárva: korábban igénybe vett vagy nem kért', ...eligibility.reasons]
+  };
 };
 
 // Promised children only count if born before the program's deadline.

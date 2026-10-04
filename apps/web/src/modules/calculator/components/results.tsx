@@ -83,6 +83,7 @@ export const Results = ({ plan }: Props) => {
             hint='Inflációval mai forintra átszámolva, mert a későbbi törlesztők ma kevesebbet érnek'
           />
           <Stat emphasis label='Illeték' value={formatHuf(plan.stampDuty)} />
+          <Stat emphasis label='Felhasznált önerő' value={formatHuf(plan.ownFundsUsed)} />
           {plan.cashKept > 0 && (
             <Stat
               emphasis
@@ -90,6 +91,22 @@ export const Results = ({ plan }: Props) => {
               value={formatHuf(plan.cashKept)}
               hint='Megtartott önerő és a Babaváró fel nem használt része. Állampapírban vagy ETF-ben többet hoz, mint amennyibe a hitel kerül, a rangsor ezzel is számol.'
             />
+          )}
+          {plan.cashKept > 0 && (
+            <>
+              <Stat
+                emphasis
+                label='Induló befektetési hozam'
+                value={`${formatHuf(plan.investmentReturn.initialMonthly)} / hó`}
+                hint='Az első évben havonta: a befektethető összeg az állampapírhozammal (adó és infláció nélkül).'
+              />
+              <Stat
+                emphasis
+                label='Átlagos befektetési hozam'
+                value={`${formatHuf(plan.investmentReturn.monthlyAverage)} / hó`}
+                hint={`A futamidő alatti havi átlag, évente tőkésítve: összesen ${formatHuf(plan.investmentReturn.total)} hozam (adó és infláció nélkül).`}
+              />
+            </>
           )}
           <Stat
             emphasis

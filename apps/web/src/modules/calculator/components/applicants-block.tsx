@@ -2,7 +2,7 @@ import { OTTHON_START } from '@hitel/core/constants';
 import { useStore } from '@tanstack/react-form';
 import { formatHuf } from '@hitel/core/utils/currency';
 import { formatPercent, inRange } from '@hitel/core/utils/math';
-import { INPUT_LIMITS, RELATIONSHIP_OPTIONS } from '../constants';
+import { EXCLUDABLE_OPTIONS, INPUT_LIMITS, RELATIONSHIP_OPTIONS } from '../constants';
 import type { CalculatorForm } from '../hooks/use-calculator-form';
 import { FormBlock } from './form-block';
 
@@ -58,6 +58,15 @@ export const ApplicantsBlock = ({ form }: Props) => {
       </form.AppField>
       <form.AppField name='cleanRecord'>
         {(field) => <field.SwitchField label='Büntetlen előélet' />}
+      </form.AppField>
+      <form.AppField name='excludedPrograms' mode='array'>
+        {(field) => (
+          <field.CheckboxListField
+            label='Kizárt támogatások'
+            description='Amit már igénybe vettetek (a legtöbb csak egyszer jár) vagy nem szeretnétek'
+            options={EXCLUDABLE_OPTIONS}
+          />
+        )}
       </form.AppField>
     </FormBlock>
   );

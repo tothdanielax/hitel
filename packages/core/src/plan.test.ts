@@ -44,6 +44,7 @@ const household = (overrides: Partial<HouseholdInput>): HouseholdInput => {
     insuredYears: 5,
     firstHome: true,
     cleanRecord: true,
+    excludedPrograms: [],
     pregnant: false,
     childrenBirthMonths: [],
     plannedChildrenMonths: [],
@@ -260,6 +261,74 @@ describe('buildPlan', () => {
 
   it('spends own funds when bonds earn less than the loans cost', () => {
     expect(plan({ ownFunds: 60_000_000 }, { ...SETTINGS, bondYield: 0.01 }).loans).toEqual([]);
+  });
+
+  it('borrows up to the JTM limit and keeps the rest of the own funds', () => {
+    const result = plan({ ownFunds: 30_000_000, netIncome: 400_000 });
+
+    expect(result.paymentToIncome).toBeLessThanOrEqual(result.paymentToIncomeLimit);
+    expect(result.cashKept).toBeGreaterThan(0);
+    expect(result.cashKept).toBeLessThan(30_000_000);
+  });
+
+  it('averages the compounded bond return of the kept cash over the term', () => {
+    const result = plan({ ownFunds: 60_000_000 });
+    const total = 50_000_000 * (1.0548 ** 25 - 1);
+
+    expect(result.investmentReturn.monthlyAverage).toBeCloseTo(total / 300, 0);
+  });
+
+  it('starts the investment return at the first year interest', () => {
+    expect(plan({ ownFunds: 60_000_000 }).investmentReturn.initialMonthly).toBeCloseTo(
+      (50_000_000 * 0.0548) / 12,
+      0
+    );
+  });
+
+  it('reports how much of the own funds it spends', () => {
+    const result = plan({ ownFunds: 30_000_000, netIncome: 400_000 });
+
+    expect(result.ownFundsUsed + result.cashKept).toBe(30_000_000);
+  });
+
+  it('requires own funds for the down payment when Babaváró does not count', () => {
+    const result = plan(
+      { ...YOUNG_FAMILY, propertyPrice: 60_000_000, ownFunds: 0 },
+      { ...SETTINGS, babavaroAsDownPayment: false }
+    );
+
+    expect(result.warnings.some((warning) => warning.includes('saját önerő szükséges'))).toBe(true);
+  });
+
+  it('spends at least the down payment from own funds when Babaváró does not count', () => {
+    const result = plan(
+      { ...YOUNG_FAMILY, propertyPrice: 60_000_000, ownFunds: 20_000_000 },
+      { ...SETTINGS, babavaroAsDownPayment: false }
+    );
+
+    expect(result.ownFundsUsed).toBeGreaterThanOrEqual(6_000_000);
+  });
+
+  it('accepts Babaváró as down payment when the bank does', () => {
+    const result = plan({ ...YOUNG_FAMILY, propertyPrice: 60_000_000, ownFunds: 0 });
+
+    expect(result.warnings.some((warning) => warning.includes('saját önerő szükséges'))).toBe(
+      false
+    );
+  });
+
+  it('never lets a single buyer borrow the down payment', () => {
+    expect(plan({ ownFunds: 30_000_000 }).ownFundsUsed).toBeGreaterThanOrEqual(6_000_000);
+  });
+
+  it('does not double count mortgage forgiveness next to CSOK Plusz', () => {
+    const titles = texts(plan(YOUNG_FAMILY));
+
+    expect(titles.some((title) => title.includes('jelzáloghitel-elengedés'))).toBe(false);
+  });
+
+  it('never plans an excluded program', () => {
+    expect(loanIds({ ...YOUNG_FAMILY, excludedPrograms: ['BABAVARO'] })).not.toContain('BABAVARO');
   });
 
   it('keeps the unneeded part of Babaváró when borrowing pays off', () => {

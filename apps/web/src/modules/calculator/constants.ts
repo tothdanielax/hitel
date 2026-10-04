@@ -1,7 +1,7 @@
 import type { HouseholdInput } from '@hitel/core/eligibility';
 import { addMonths } from '@hitel/core/utils/date';
 import { DEFAULT_SETTINGS, type PlanSettings } from '@hitel/core/settings';
-import { MONTHS_PER_YEAR } from '@hitel/core/constants';
+import { EXCLUDABLE_PROGRAMS, MONTHS_PER_YEAR, PROGRAMS } from '@hitel/core/constants';
 
 export const BUILD_MONTH: string = import.meta.env.VITE_BUILD_MONTH;
 
@@ -21,6 +21,7 @@ export const DEFAULT_VALUES: HouseholdInput & { settings: PlanSettings } = {
   insuredYears: 5,
   firstHome: true,
   cleanRecord: true,
+  excludedPrograms: [],
   pregnant: false,
   childrenBirthMonths: [],
   plannedChildrenMonths: [],
@@ -58,6 +59,10 @@ export const SETTLEMENT_OPTIONS = {
   CITY: 'Város',
   VILLAGE: 'Falusi CSOK település'
 } as const satisfies Record<HouseholdInput['settlementType'], string>;
+
+export const EXCLUDABLE_OPTIONS: Record<string, string> = Object.fromEntries(
+  EXCLUDABLE_PROGRAMS.map((program) => [program, PROGRAMS[program].name])
+);
 
 export const INPUT_LIMITS = {
   age: { min: 16, max: 99 },

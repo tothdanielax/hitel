@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { checkEligibility, type HouseholdInput } from './eligibility';
+import { checkEligibility, normalizeInput, type HouseholdInput } from './eligibility';
 
 const household = (overrides: Partial<HouseholdInput>): HouseholdInput => {
   return {
@@ -9,6 +9,7 @@ const household = (overrides: Partial<HouseholdInput>): HouseholdInput => {
     insuredYears: 5,
     firstHome: true,
     cleanRecord: true,
+    excludedPrograms: [],
     pregnant: false,
     childrenBirthMonths: [],
     plannedChildrenMonths: ['2027-06'],
@@ -29,6 +30,16 @@ const household = (overrides: Partial<HouseholdInput>): HouseholdInput => {
 const find = (input: HouseholdInput, program: string) => {
   return checkEligibility(input).find((item) => item.program === program);
 };
+
+describe('excluded programs', () => {
+  it('rules out a program the household already used', () => {
+    const result = checkEligibility(
+      normalizeInput(household({ excludedPrograms: ['OTTHON_START'] }))
+    ).find((item) => item.program === 'OTTHON_START');
+
+    expect(result?.eligible).toBe(false);
+  });
+});
 
 describe('checkEligibility', () => {
   it('caps Otthon Start at 90% of the price', () => {

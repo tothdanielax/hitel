@@ -1,4 +1,4 @@
-import { ISO_MONTH } from '@hitel/core/constants';
+import { EXCLUDABLE_PROGRAMS, ISO_MONTH } from '@hitel/core/constants';
 import { diffFrom, mergeInto } from '@hitel/core/utils/object';
 import {
   DEFAULT_VALUES,
@@ -40,6 +40,9 @@ export const fromSearch = (search: unknown): CalculatorValues => {
     startMonth: ISO_MONTH.test(merged.startMonth) ? merged.startMonth : DEFAULT_VALUES.startMonth,
     childrenBirthMonths: months(merged.childrenBirthMonths),
     plannedChildrenMonths: months(merged.plannedChildrenMonths),
+    excludedPrograms: merged.excludedPrograms.filter((program) =>
+      EXCLUDABLE_PROGRAMS.includes(program)
+    ),
     settings: {
       ...merged.settings,
       // Only the user editable parts of an offer; names and source links always come from the defaults.

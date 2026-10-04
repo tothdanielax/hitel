@@ -50,6 +50,8 @@ export const CSOK_PLUSZ = {
   name: 'CSOK Plusz',
   legalBasis: '518/2023. (XI. 30.) Korm. rendelet',
   maxAmountByChildren: [0, 15_000_000, 30_000_000, 50_000_000],
+  // Bank sources (?).
+  minAmount: 2_500_000,
   annualRate: 0.03,
   minTermYears: 10,
   maxTermYears: 25,
@@ -156,7 +158,6 @@ export const PROGRAMS: Record<GovProgram, { name: string; legalBasis: string }> 
   MORTGAGE_FORGIVENESS
 };
 
-// Programs that are loans (the rest are grants or forgiveness).
 // What a loan may pay for. FREE money (a personal loan) may also be kept and invested.
 export type LoanPurpose = 'PURCHASE' | 'RENOVATION' | 'FREE';
 
@@ -174,6 +175,7 @@ export const LOAN_PURPOSES: Partial<Record<GovProgram, readonly LoanPurpose[]>> 
 // Market housing loans finance purchase and renovation alike.
 export const BANK_LOAN_PURPOSES: readonly LoanPurpose[] = ['PURCHASE', 'RENOVATION'];
 
+// Programs that are loans (the rest are grants or forgiveness).
 export const LOAN_PROGRAMS: GovProgram[] = [
   GOV_PROGRAM.BABAVARO,
   GOV_PROGRAM.CSOK_PLUSZ,
@@ -182,6 +184,15 @@ export const LOAN_PROGRAMS: GovProgram[] = [
 ];
 
 // Pairs that cannot be used together. Unclear pairs from docs/gov-loans.md are treated as not allowed.
+// Programs the user may rule out (already used once, or simply not wanted).
+export const EXCLUDABLE_PROGRAMS: GovProgram[] = [
+  GOV_PROGRAM.OTTHON_START,
+  GOV_PROGRAM.CSOK_PLUSZ,
+  GOV_PROGRAM.BABAVARO,
+  GOV_PROGRAM.FALUSI_CSOK,
+  GOV_PROGRAM.FALUSI_CSOK_LOAN
+];
+
 export const INCOMPATIBLE_PROGRAMS: readonly (readonly [GovProgram, GovProgram])[] = [
   [GOV_PROGRAM.CSOK_PLUSZ, GOV_PROGRAM.FALUSI_CSOK_LOAN],
   [GOV_PROGRAM.OTTHON_START, GOV_PROGRAM.FALUSI_CSOK_LOAN]

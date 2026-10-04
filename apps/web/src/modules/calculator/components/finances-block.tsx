@@ -13,7 +13,14 @@ export const FinancesBlock = ({ form }: Props) => {
     <FormBlock title='Pénzügyek' description='Önerő, jövedelem, futamidő és folyósítás'>
       <div className='flex flex-col gap-4 sm:flex-row'>
         <form.AppField name='ownFunds' validators={{ onChange: inRange(INPUT_LIMITS.money) }}>
-          {(field) => <field.NumberField label='Önerő' unit='Ft' step={MONEY_STEP.funds} />}
+          {(field) => (
+            <field.NumberField
+              label='Rendelkezésre álló önerő'
+              unit='Ft'
+              step={MONEY_STEP.funds}
+              description='Legfeljebb ennyit használ fel, a többit befektetésre hagyja, ha az olcsóbb'
+            />
+          )}
         </form.AppField>
         <form.AppField name='netIncome' validators={{ onChange: inRange(INPUT_LIMITS.netIncome) }}>
           {(field) => (

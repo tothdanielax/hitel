@@ -23,6 +23,8 @@ export type PlanSettings = {
   falusiCsokLoanRate: number;
   // Borrow cheap loans first and keep own funds invested when that costs less.
   keepOwnFunds: boolean;
+  // Many banks accept Babaváró as önerő, some do not.
+  babavaroAsDownPayment: boolean;
   offers: OfferSetting[];
 };
 
@@ -33,6 +35,7 @@ export const DEFAULT_SETTINGS: PlanSettings = {
   csokPluszRate: CSOK_PLUSZ.annualRate,
   falusiCsokLoanRate: FALUSI_CSOK_LOAN.annualRate,
   keepOwnFunds: true,
+  babavaroAsDownPayment: true,
   offers: BANKS.flatMap((bank) =>
     bank.offers.map((offer, index) => ({
       ...offer,

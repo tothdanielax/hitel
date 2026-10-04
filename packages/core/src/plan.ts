@@ -59,8 +59,12 @@ export type Plan = {
   loans: PlannedLoan[];
   grant: number;
   subsidy: number;
+  // Own funds are a maximum: the planner decides how much of them to spend.
+  ownFundsUsed: number;
   // Own funds left over plus unneeded free-use loan money, worth investing.
   cashKept: number;
+  // What cashKept earns at the bond yield over the term, compounded yearly.
+  investmentReturn: { total: number; initialMonthly: number; monthlyAverage: number };
   stampDuty: number;
   paymentToIncome: number;
   paymentToIncomeLimit: number;
@@ -92,6 +96,7 @@ export const buildPlan = (
     eligibility,
     maxAmount,
     grant: grant + Math.min(input.renovationBudget, modernizationGrant),
+    purchaseGrant: grant,
     priceNeed: Math.max(0, input.propertyPrice - grant),
     renovationNeed: Math.max(0, input.renovationBudget - modernizationGrant),
     bankOffer: cheapestOffer(settings.offers, (offer) => offer.kind !== 'OTTHON_START'),
@@ -100,25 +105,50 @@ export const buildPlan = (
   const loanPrograms = LOAN_PROGRAMS.filter((program) => maxAmount(program) > 0);
   const csokPluszFloor = csokPluszForgivenessFloor(context);
   const csokPluszCaps = csokPluszFloor > 0 ? [Infinity, csokPluszFloor] : [Infinity];
-  const modes = settings.keepOwnFunds ? [false, true] : [false];
+  // Own funds all up front, or (when allowed) loans first with only as much own funds up front as the JTM limit needs.
+  const upFront = settings.keepOwnFunds ? [input.ownFunds, 0] : [input.ownFunds];
 
-  // Every order of every legal set, own funds first or last, and CSOK Plusz at its max or at the
+  // Every order of every legal set, both own funds strategies, and CSOK Plusz at its max or at the
   // smallest amount that still absorbs every forgiveness (the rest then goes to cheaper loans).
-  // ponytail: corner candidates only; a JTM-bound optimum in between needs a real optimizer.
   const candidates = arrangements(loanPrograms)
     .filter(isCompatible)
     .flatMap((programs) =>
-      modes.flatMap((loansFirst) =>
+      upFront.flatMap((ownFundsFirst) =>
         (programs.includes(GOV_PROGRAM.CSOK_PLUSZ) ? csokPluszCaps : [Infinity]).map(
-          (csokPluszCap) => ({ programs, loansFirst, csokPluszCap })
+          (csokPluszCap) => ({ programs, ownFundsFirst, csokPluszCap })
         )
       )
     );
   const [best] = candidates
-    .map((candidate) => evaluate(context, candidate))
+    .map((candidate) =>
+      candidate.ownFundsFirst === 0 ? withinJtm(context, candidate) : evaluate(context, candidate)
+    )
     .toSorted(compareEvaluations);
-  return (best ?? evaluate(context, { programs: [], loansFirst: false, csokPluszCap: Infinity }))
-    .plan;
+  return (
+    best ??
+    evaluate(context, { programs: [], ownFundsFirst: input.ownFunds, csokPluszCap: Infinity })
+  ).plan;
+};
+
+const fitsJtm = ({ plan }: Evaluation): boolean => {
+  return plan.paymentToIncome <= plan.paymentToIncomeLimit;
+};
+
+// Borrows as much as the JTM limit allows: the least own funds up front that still fits it.
+const withinJtm = (context: Context, candidate: Candidate): Evaluation => {
+  const evaluateWith = (ownFundsFirst: number) => {
+    return evaluate(context, { ...candidate, ownFundsFirst });
+  };
+  const loansFirst = evaluateWith(0);
+  if (fitsJtm(loansFirst) || !fitsJtm(evaluateWith(context.input.ownFunds))) return loansFirst;
+  let low = 0;
+  let high = context.input.ownFunds;
+  while (high - low > AMOUNT_SEARCH_STEP) {
+    const middle = (low + high) / 2;
+    if (fitsJtm(evaluateWith(middle))) high = middle;
+    else low = middle;
+  }
+  return evaluateWith(Math.ceil(high / AMOUNT_SEARCH_STEP) * AMOUNT_SEARCH_STEP);
 };
 
 type Context = {
@@ -128,6 +158,7 @@ type Context = {
   maxAmount: (program: GovProgram) => number;
   // Grant money in use: toward the price, plus the modernization part when renovating.
   grant: number;
+  purchaseGrant: number;
   priceNeed: number;
   renovationNeed: number;
   bankOffer: OfferSetting | undefined;
@@ -136,13 +167,19 @@ type Context = {
 
 type PlanTranche = Tranche & { note: string; isBank: boolean; fixationYears: number };
 
-type Candidate = { programs: GovProgram[]; loansFirst: boolean; csokPluszCap: number };
+type Candidate = {
+  programs: GovProgram[];
+  // Own funds spent before the subsidized loans; the rest only after them.
+  ownFundsFirst: number;
+  csokPluszCap: number;
+};
 
 type Evaluation = { plan: Plan; shortfall: number };
 
 const evaluate = (context: Context, candidate: Candidate): Evaluation => {
   const { input, settings } = context;
-  const { programs, loansFirst } = candidate;
+  const { programs } = candidate;
+  const loansFirst = candidate.ownFundsFirst < input.ownFunds;
   const loanToValue = input.firstHome ? MNB_LIMITS.firstBuyerLoanToValue : MNB_LIMITS.loanToValue;
   let mortgageRoom = input.propertyPrice * loanToValue;
   let ownFunds = input.ownFunds;
@@ -163,12 +200,23 @@ const evaluate = (context: Context, candidate: Candidate): Evaluation => {
     }
     return taken;
   };
-  const useOwnFunds = () => {
-    ownFunds -= cover(BANK_LOAN_PURPOSES, ownFunds);
+  const useOwnFunds = (limit: number) => {
+    ownFunds -= cover(BANK_LOAN_PURPOSES, Math.max(0, Math.min(ownFunds, limit)));
   };
   const tranches: PlanTranche[] = [];
 
-  if (!loansFirst) useOwnFunds();
+  // Banks finance at most the LTV share of the price (Otthon Start also requires 10% önerő). The rest
+  // comes from own funds and grants, and from Babaváró only when the bank accepts it.
+  const ownDownPayment = settings.babavaroAsDownPayment
+    ? 0
+    : Math.min(
+        needs.PURCHASE,
+        Math.max(0, input.propertyPrice * (1 - loanToValue) - context.purchaseGrant)
+      );
+  const downPaid = Math.min(ownFunds, ownDownPayment);
+  ownFunds -= downPaid;
+  needs.PURCHASE -= downPaid;
+  useOwnFunds(candidate.ownFundsFirst - downPaid);
   for (const program of programs) {
     const isMortgage = program !== GOV_PROGRAM.BABAVARO;
     const purposes = LOAN_PURPOSES[program] ?? [];
@@ -187,13 +235,16 @@ const evaluate = (context: Context, candidate: Candidate): Evaluation => {
     if (isMortgage) mortgageRoom -= amount;
     tranches.push(govTranche(context, program, amount));
   }
-  if (loansFirst) useOwnFunds();
+  useOwnFunds(ownFunds);
 
   if (mortgageRoom > 0 && context.bankOffer) {
     const amount = cover(BANK_LOAN_PURPOSES, mortgageRoom);
     if (amount > 0) tranches.push(bankTranche(context, amount, context.bankOffer));
   }
-  const remaining = needs.PURCHASE + needs.RENOVATION;
+  const hasMortgage = tranches.some((tranche) => tranche.id !== GOV_PROGRAM.BABAVARO);
+  const downPaymentGap = hasMortgage ? ownDownPayment - downPaid : 0;
+  const uncovered = needs.PURCHASE + needs.RENOVATION;
+  const remaining = uncovered + downPaymentGap;
   const cashKept = ownFunds + freeExtra;
 
   addMortgageForgiveness(input, tranches);
@@ -210,7 +261,9 @@ const evaluate = (context: Context, candidate: Candidate): Evaluation => {
   return {
     shortfall: remaining,
     plan: {
+      ownFundsUsed: input.ownFunds - ownFunds,
       cashKept,
+      investmentReturn: investmentReturn(cashKept, settings.bondYield, input.termYears),
       loans: tranches.map((tranche, index) => {
         const trancheSchedule = schedule.tranches[index];
         return {
@@ -234,7 +287,7 @@ const evaluate = (context: Context, candidate: Candidate): Evaluation => {
       timeline: timeline(input, schedule),
       eligibility: context.eligibility,
       warnings: [
-        ...(remaining > 0
+        ...(uncovered > 0
           ? [
               input.renovationBudget > 0
                 ? 'A hitelek és az önerő nem fedezik a vételárat és a felújítást'
@@ -244,10 +297,15 @@ const evaluate = (context: Context, candidate: Candidate): Evaluation => {
         ...(paymentToIncome > paymentToIncomeLimit
           ? ['A törlesztőrészlet meghaladja a jövedelemarányos (JTM) korlátot']
           : []),
-        ...(programs.includes(GOV_PROGRAM.BABAVARO)
+        ...(downPaymentGap > 0
+          ? [
+              `Legalább ${formatHuf(ownDownPayment)} saját önerő szükséges: a bank legfeljebb a vételár ${formatPercent(loanToValue)}-át finanszírozza`
+            ]
+          : []),
+        ...(settings.babavaroAsDownPayment && tranches.some(({ id }) => id === GOV_PROGRAM.BABAVARO)
           ? ['A Babaváró önerőként való elfogadása bankfüggő']
           : []),
-        ...(remaining > 0 && !context.bankOffer
+        ...(uncovered > 0 && !context.bankOffer
           ? ['Nincs bekapcsolt banki ajánlat a kiegészítő hitelhez']
           : [])
       ],
@@ -342,7 +400,10 @@ const csokPluszForgivenessFloor = (context: Context): number => {
     if (forgiven(middle) >= full - BALANCE_EPSILON) high = middle;
     else low = middle;
   }
-  const floor = Math.ceil(high / AMOUNT_SEARCH_STEP) * AMOUNT_SEARCH_STEP;
+  const floor = Math.max(
+    CSOK_PLUSZ.minAmount,
+    Math.ceil(high / AMOUNT_SEARCH_STEP) * AMOUNT_SEARCH_STEP
+  );
   return floor < max ? floor : 0;
 };
 
@@ -435,8 +496,10 @@ const bankTranche = (context: Context, amount: number, offer: OfferSetting): Pla
   };
 };
 
-// Applied to the subsidized mortgage first; CSOK Plusz already forgives per child, Babaváró is not a mortgage.
+// Applied to the subsidized mortgage first; Babaváró is not a mortgage. A child that triggers CSOK Plusz
+// forgiveness cannot also reduce another mortgage (?), and CSOK Plusz forgives every child from the 2nd.
 const addMortgageForgiveness = (input: HouseholdInput, tranches: PlanTranche[]): void => {
+  if (tranches.some((tranche) => tranche.id === GOV_PROGRAM.CSOK_PLUSZ)) return;
   const target =
     tranches.find((tranche) => tranche.id === GOV_PROGRAM.OTTHON_START) ??
     tranches.find((tranche) => tranche.isBank) ??
@@ -565,9 +628,19 @@ const cheapestOffer = (
     .toSorted((a, b) => a.annualRate - b.annualRate)[0];
 };
 
-// Kept cash is worth its face value today, so it offsets the present value of the repayments.
+const investmentReturn = (amount: number, annualRate: number, years: number) => {
+  const total = amount * ((1 + annualRate) ** years - 1);
+  return {
+    total,
+    initialMonthly: (amount * annualRate) / MONTHS_PER_YEAR,
+    monthlyAverage: total / (years * MONTHS_PER_YEAR)
+  };
+};
+
+// Kept cash is worth its face value today, so it offsets the present value of the repayments;
+// stamp duty is paid in cash up front, so exempting combinations save it.
 const cost = (plan: Plan): number => {
-  return plan.schedule.presentValue - plan.cashKept;
+  return plan.schedule.presentValue + plan.stampDuty - plan.cashKept;
 };
 
 const compareEvaluations = (a: Evaluation, b: Evaluation): number => {
