@@ -1,35 +1,41 @@
-import { Field, FieldDescription, FieldLabel } from '@hitel/ui/components/field';
+import { Field, FieldDescription, FieldError, FieldLabel } from '@hitel/ui/components/field';
 import { Input } from '@hitel/ui/components/input';
-import { useId } from 'react';
+import { useFieldContext } from '../hooks/form-context';
 
 type Props = {
   label: string;
-  value: number;
-  onChange: (value: number) => void;
   unit?: string;
   description?: string;
   step?: number;
+  min?: number;
+  max?: number;
 };
 
-export const NumberField = ({ label, value, onChange, unit, description, step = 1 }: Props) => {
-  const id = useId();
+export const NumberField = ({ label, unit, description, step = 1, min = 0, max }: Props) => {
+  const field = useFieldContext<number>();
+  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
 
   return (
-    <Field>
-      <FieldLabel htmlFor={id}>
+    <Field data-invalid={isInvalid}>
+      <FieldLabel htmlFor={field.name}>
         {label}
         {unit && <span className='text-muted-foreground font-normal'>({unit})</span>}
       </FieldLabel>
       <Input
-        id={id}
+        id={field.name}
+        name={field.name}
         type='number'
         inputMode='numeric'
-        min={0}
+        min={min}
+        max={max}
         step={step}
-        value={value}
-        onChange={(event) => onChange(event.target.valueAsNumber || 0)}
+        value={field.state.value}
+        aria-invalid={isInvalid}
+        onBlur={field.handleBlur}
+        onChange={(event) => field.handleChange(event.target.valueAsNumber || 0)}
       />
       {description && <FieldDescription>{description}</FieldDescription>}
+      {isInvalid && <FieldError errors={field.state.meta.errors.map((message) => ({ message }))} />}
     </Field>
   );
 };

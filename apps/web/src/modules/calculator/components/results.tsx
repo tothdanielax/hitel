@@ -1,3 +1,4 @@
+import type { Plan } from '@hitel/core/plan';
 import { Alert, AlertDescription } from '@hitel/ui/components/alert';
 import { Badge } from '@hitel/ui/components/badge';
 import { Button } from '@hitel/ui/components/button';
@@ -15,48 +16,58 @@ import {
 } from '@hitel/ui/components/collapsible';
 import { Paragraph } from '@hitel/ui/components/typography';
 import { ChevronDownIcon } from 'lucide-react';
-import { formatHuf } from '@/utils/format';
-import type { CalculationResult } from '../utils/mock-result';
-import { LoanTable } from './loan-table';
+import { formatHuf } from '@/utils/currency';
+import { formatPercent } from '@/utils/percent';
+import { Eligibilities } from './eligibilities';
+import { LoanList } from './loan-list';
 import { Timeline } from './timeline';
 
 type Props = {
-  result: CalculationResult;
+  plan: Plan;
 };
 
-export const Results = ({ result }: Props) => {
+export const Results = ({ plan }: Props) => {
+  const subsidy = plan.schedule.totalForgiven + plan.grant;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Legjobb kombináció</CardTitle>
-        <CardDescription>
-          {result.loans.map((loan) => (
-            <Badge key={loan.name} variant='secondary' className='mr-1'>
+        <CardDescription className='flex flex-wrap gap-1'>
+          {plan.loans.length === 0 && 'Nincs szükség hitelre'}
+          {plan.loans.map((loan) => (
+            <Badge key={loan.id} variant='secondary'>
               {loan.name}
             </Badge>
           ))}
         </CardDescription>
       </CardHeader>
       <CardContent className='flex flex-col gap-4'>
-        <dl className='grid grid-cols-2 gap-4'>
-          <Stat label='Átlagos havi törlesztő' value={result.averageMonthly} />
-          <Stat label='Teljes visszafizetés' value={result.totalRepayment} />
-          <Stat label='Induló havi törlesztő' value={result.initialMonthly} />
-          <Stat label='Állami támogatás' value={result.totalSubsidy} />
+        <dl className='grid grid-cols-1 gap-4 min-[380px]:grid-cols-2'>
+          <Stat label='Átlagos havi törlesztő' value={formatHuf(plan.schedule.averageMonthly)} />
+          <Stat label='Teljes visszafizetés' value={formatHuf(plan.schedule.totalPaid)} />
+          <Stat label='Induló havi törlesztő' value={formatHuf(plan.schedule.initialMonthly)} />
+          <Stat label='Állami támogatás' value={formatHuf(subsidy)} />
+          <Stat label='Illeték' value={formatHuf(plan.stampDuty)} />
+          <Stat
+            label='Törlesztő / jövedelem (JTM)'
+            value={`${formatPercent(plan.paymentToIncome)} / ${formatPercent(plan.paymentToIncomeLimit)}`}
+          />
         </dl>
-        {result.warnings.map((warning) => (
+        {plan.warnings.map((warning) => (
           <Alert key={warning}>
             <AlertDescription>{warning}</AlertDescription>
           </Alert>
         ))}
         <Collapsible>
-          <CollapsibleTrigger render={<Button variant='outline' className='w-full' />}>
+          <CollapsibleTrigger render={<Button variant='outline' className='group w-full' />}>
             Részletek és idővonal
-            <ChevronDownIcon />
+            <ChevronDownIcon className='transition-transform group-data-panel-open:rotate-180' />
           </CollapsibleTrigger>
           <CollapsibleContent className='flex flex-col gap-6 pt-4'>
-            <LoanTable loans={result.loans} />
-            <Timeline events={result.timeline} />
+            <LoanList loans={plan.loans} />
+            <Timeline events={plan.timeline} />
+            <Eligibilities eligibility={plan.eligibility} />
           </CollapsibleContent>
         </Collapsible>
       </CardContent>
@@ -64,15 +75,15 @@ export const Results = ({ result }: Props) => {
   );
 };
 
-const Stat = ({ label, value }: { label: string; value: number }) => {
+const Stat = ({ label, value }: { label: string; value: string }) => {
   return (
-    <div>
+    <div className='flex flex-col gap-1'>
       <dt>
         <Paragraph size='sm' muted>
           {label}
         </Paragraph>
       </dt>
-      <dd className='text-2xl font-semibold tabular-nums'>{formatHuf(value)}</dd>
+      <dd className='text-xl font-semibold tabular-nums sm:text-2xl'>{value}</dd>
     </div>
   );
 };

@@ -1,29 +1,33 @@
-import { Field, FieldLabel, FieldTitle } from '@hitel/ui/components/field';
+import { Field, FieldLabel, FieldSet, FieldLegend } from '@hitel/ui/components/field';
 import { RadioGroup, RadioGroupItem } from '@hitel/ui/components/radio-group';
+import { useFieldContext } from '../hooks/form-context';
 
-type Props<T extends string> = {
+type Props = {
   label: string;
-  value: T;
-  options: Record<T, string>;
-  onChange: (value: T) => void;
+  options: Record<string, string>;
 };
 
-export const ChoiceField = <T extends string>({ label, value, options, onChange }: Props<T>) => {
+export const ChoiceField = ({ label, options }: Props) => {
+  const field = useFieldContext<string>();
+
   return (
-    <Field>
-      <FieldTitle>{label}</FieldTitle>
+    <FieldSet>
+      <FieldLegend variant='label'>{label}</FieldLegend>
       <RadioGroup
-        className='flex flex-wrap gap-4'
-        value={value}
-        onValueChange={(next) => onChange(next as T)}
+        name={field.name}
+        className='flex flex-wrap gap-x-6 gap-y-3'
+        value={field.state.value}
+        onValueChange={(value) => field.handleChange(String(value))}
       >
-        {Object.entries<string>(options).map(([key, text]) => (
-          <FieldLabel key={key} className='flex items-center gap-2 font-normal'>
-            <RadioGroupItem value={key} />
-            {text}
-          </FieldLabel>
+        {Object.entries(options).map(([value, text]) => (
+          <Field key={value} orientation='horizontal' className='w-auto'>
+            <RadioGroupItem value={value} id={`${field.name}-${value}`} />
+            <FieldLabel htmlFor={`${field.name}-${value}`} className='font-normal'>
+              {text}
+            </FieldLabel>
+          </Field>
         ))}
       </RadioGroup>
-    </Field>
+    </FieldSet>
   );
 };
