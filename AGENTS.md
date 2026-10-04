@@ -82,10 +82,12 @@ Follow the conventions defined in `docs/[convention].md` files, if not asked oth
 - Testing
   - Changes to: `.test.ts`, `packages/core`
   - Reference: [testing](docs/testing.md)
+- CSS
+  - Changes to: `.css`
+  - Reference: [css](docs/css.md)
 - Markdown
   - Changes to: `.md`
   - Reference: [markdown](docs/markdown.md)
-
-## Commits
-
-- Follow `type: summary` (e.g. `feat: add gov loan constants`)
+- Git
+  - Changes to: commits, branches, pull requests
+  - Reference: [git](docs/git.md)

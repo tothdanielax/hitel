@@ -40,8 +40,4 @@ packages/ui/src/
 import { Button } from '@hitel/ui/components/button';
 ```
 
-## CSS (`.css`)
-
-- we have a global stylesheet (`src/styles/globals.css`) with Tailwind base
-- use `Tailwind` classes when possible
-- when editing `root` update `:dark` also if needed
+See [css](../../docs/css.md) for stylesheet conventions.
