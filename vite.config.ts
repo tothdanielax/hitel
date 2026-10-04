@@ -7,6 +7,7 @@ export default defineConfig({
   },
 
   lint: {
+    ignorePatterns: ['**/routeTree.gen.ts'],
     options: {
       typeAware: true,
       typeCheck: true
@@ -14,6 +15,7 @@ export default defineConfig({
   },
 
   fmt: {
+    ignorePatterns: ['**/routeTree.gen.ts'],
     trailingComma: 'none',
     singleQuote: true,
     jsxSingleQuote: true,
