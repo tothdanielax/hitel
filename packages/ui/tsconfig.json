@@ -4,7 +4,10 @@
     "jsx": "react-jsx",
     "erasableSyntaxOnly": true,
     "exactOptionalPropertyTypes": true,
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "paths": {
+      "@hitel/ui/*": ["./src/*"]
+    }
   },
   "include": ["./src"]
 }

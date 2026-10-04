@@ -1,4 +1,4 @@
-import { cn } from '@hitel/ui/lib/utils';
+import { cn } from 'cn';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type { HTMLAttributes } from 'react';
 

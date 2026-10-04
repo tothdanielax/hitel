@@ -8,6 +8,7 @@ Shared UI component library
 - Tailwind CSS (v4), see `./src/styles/global.css`
 - Shadcn (v4, see `./components.json`)
 - BaseUI (v1)
+- `cn` (shadcn class merger, replaces clsx + tailwind-merge)
 
 ## Structure
 
@@ -16,9 +17,6 @@ packages/ui/src/
 ├── components/           # UI components
 │   ├── button.tsx
 │   └── ...
-├── hooks/
-├── lib/
-│   └── utils.ts          # `cn()` helper
 └── styles/
     └── globals.css       # `Tailwind` base
 ```
@@ -26,7 +24,6 @@ packages/ui/src/
 ## Quick Reference
 
 - Add component: `src/components/<name>.tsx`
-- Add hook: `src/hooks/use-<name>.tsx`
 - Modify styles: `src/styles/globals.css`
 
 ## Conventions

@@ -12,9 +12,7 @@
   "iconLibrary": "lucide",
   "aliases": {
     "components": "@/components",
-    "hooks": "@/hooks",
-    "lib": "@/lib",
-    "utils": "@hitel/ui/lib/utils",
+    "utils": "cn",
     "ui": "@hitel/ui/components"
   },
   "rtl": false,

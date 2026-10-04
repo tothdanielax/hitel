@@ -11,7 +11,7 @@
 - Use colors in the following order: 1. `globals.css` -> 2. `Tailwind` colors (`bg-gray-200`) -> 3. hex (`#f7fafc`)
 - Use `flex` classes over `grid` ones for one-dimensional layouts
 - Use `Tailwind` classes over inline styles
-- Use `cn()` helper from `@hitel/ui/lib/utils` for conditional `className`-s (`cn(isActive ? 'flex' : 'hidden')`)
+- Use `cn()` from the `cn` package for conditional `className`-s (`cn(isActive ? 'flex' : 'hidden')`)
 - Group classes by functionality with `cn()` helper (`flex` classes in one row) when defining 10+ classes
 - Avoid `absolute` positioning
 - Use the least amount of `className`-s possible

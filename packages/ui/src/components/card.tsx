@@ -1,62 +1,61 @@
-import { cn } from '@hitel/ui/lib/utils';
-import type { ComponentProps } from 'react';
+import * as React from 'react';
+import { cn } from 'cn';
 
-type CardProps = ComponentProps<'div'> & { size?: 'default' | 'sm' };
-export const Card = ({ className, size = 'default', ...props }: CardProps) => {
+function Card({
+  className,
+  size = 'default',
+  ...props
+}: React.ComponentProps<'div'> & { size?: 'default' | 'sm' }) {
   return (
     <div
       data-slot='card'
       data-size={size}
       className={cn(
-        'group/card flex flex-col gap-4 overflow-hidden rounded-xl bg-card py-4 text-card-foreground text-sm ring-1 ring-foreground/10 has-[>img:first-child]:pt-0 has-data-[slot=card-footer]:pb-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
+        'group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground ring-1 ring-foreground/10 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
         className
       )}
       {...props}
     />
   );
-};
+}
 
-type CardHeaderProps = ComponentProps<'div'>;
-export const CardHeader = ({ className, ...props }: CardHeaderProps) => {
+function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot='card-header'
       className={cn(
-        'group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-xl px-4 has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] group-data-[size=sm]/card:px-3 [.border-b]:pb-4 group-data-[size=sm]/card:[.border-b]:pb-3',
+        'group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-xl px-(--card-spacing) has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-(--card-spacing)',
         className
       )}
       {...props}
     />
   );
-};
+}
 
-type CardTitleProps = ComponentProps<'div'>;
-export const CardTitle = ({ className, ...props }: CardTitleProps) => {
+function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot='card-title'
       className={cn(
-        'font-semibold text-base leading-snug group-data-[size=sm]/card:text-sm',
+        'text-base leading-snug font-medium group-data-[size=sm]/card:text-sm',
         className
       )}
       {...props}
     />
   );
-};
+}
 
-type CardDescriptionProps = ComponentProps<'div'>;
-export const CardDescription = ({ className, ...props }: CardDescriptionProps) => {
+function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot='card-description'
-      className={cn('text-muted-foreground text-sm', className)}
+      className={cn('text-sm text-muted-foreground', className)}
       {...props}
     />
   );
-};
+}
 
-type CardActionProps = ComponentProps<'div'>;
-export const CardAction = ({ className, ...props }: CardActionProps) => {
+function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot='card-action'
@@ -64,29 +63,25 @@ export const CardAction = ({ className, ...props }: CardActionProps) => {
       {...props}
     />
   );
-};
+}
 
-type CardContentProps = ComponentProps<'div'>;
-export const CardContent = ({ className, ...props }: CardContentProps) => {
+function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
   return (
-    <div
-      data-slot='card-content'
-      className={cn('px-4 group-data-[size=sm]/card:px-3', className)}
-      {...props}
-    />
+    <div data-slot='card-content' className={cn('px-(--card-spacing)', className)} {...props} />
   );
-};
+}
 
-type CardFooterProps = ComponentProps<'div'>;
-export const CardFooter = ({ className, ...props }: CardFooterProps) => {
+function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot='card-footer'
       className={cn(
-        'flex items-center rounded-b-xl border-t bg-muted/50 p-4 group-data-[size=sm]/card:p-3',
+        'flex items-center rounded-b-xl border-t bg-muted/50 p-(--card-spacing)',
         className
       )}
       {...props}
     />
   );
-};
+}
+
+export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent };
