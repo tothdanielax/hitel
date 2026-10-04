@@ -10,12 +10,17 @@ export default defineConfig({
 
   plugins: [
     tanstackStart({
-      prerender: { enabled: true, crawlLinks: true }
+      prerender: { enabled: true }
     }),
     react(),
     babel({ presets: [reactCompilerPreset()] }),
     tailwindcss()
   ],
+
+  // Prerendered HTML and the first client render must agree on the default start month.
+  define: {
+    'import.meta.env.VITE_BUILD_MONTH': JSON.stringify(new Date().toISOString().slice(0, 7))
+  },
 
   resolve: {
     tsconfigPaths: true

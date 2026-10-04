@@ -7,6 +7,7 @@ import {
   MAX_COUNTED_CHILDREN,
   OTTHON_START,
   type GovProgram,
+  TERM_YEARS,
   type PropertyType
 } from './constants';
 import { monthsBetween } from './months';
@@ -35,6 +36,8 @@ export type HouseholdInput = {
   netIncome: number;
   termYears: number;
   startMonth: string;
+  bondYield: number;
+  inflationRate: number;
 };
 
 export type Eligibility = {
@@ -42,6 +45,21 @@ export type Eligibility = {
   eligible: boolean;
   maxAmount: number;
   reasons: string[];
+};
+
+// Form rows can be blank or unordered; rules assume valid, chronological months and a sane term.
+export const normalizeInput = (input: HouseholdInput): HouseholdInput => {
+  const validMonths = (months: string[]): string[] => {
+    return months.filter((month) => ISO_MONTH.test(month)).toSorted();
+  };
+  return {
+    ...input,
+    childrenBirthMonths: validMonths(input.childrenBirthMonths),
+    plannedChildrenMonths: validMonths(input.plannedChildrenMonths).filter(
+      (month) => monthsBetween(input.startMonth, month) >= 0
+    ),
+    termYears: Math.min(TERM_YEARS.max, Math.max(TERM_YEARS.min, input.termYears || TERM_YEARS.min))
+  };
 };
 
 export const checkEligibility = (input: HouseholdInput): Eligibility[] => {
@@ -183,6 +201,8 @@ const common = (
     )
   ];
 };
+
+const ISO_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 const when = (condition: boolean, reason: string): string[] => {
   return condition ? [reason] : [];

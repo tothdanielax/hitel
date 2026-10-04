@@ -146,3 +146,11 @@ export const INCOMPATIBLE_PROGRAMS: readonly (readonly [GovProgram, GovProgram])
 export const MARKET_REPRICE_RATE = 0.0715;
 
 export const MAX_COUNTED_CHILDREN = 3;
+
+export const TERM_YEARS = { min: 5, max: 35 } as const;
+
+// MÁP Plusz 2031/M6 average yield (5.00-6.00%, tax free), allampapirkalkulator.hu, 2026-10.
+export const DEFAULT_BOND_YIELD = 0.0548;
+
+// MNB long-term inflation target from 2028 (Inflációs jelentés 2026 szeptember).
+export const DEFAULT_INFLATION_RATE = 0.025;

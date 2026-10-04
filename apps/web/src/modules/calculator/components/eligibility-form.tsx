@@ -1,7 +1,7 @@
 import { useStore } from '@tanstack/react-form';
+import { TERM_YEARS } from '@hitel/core/constants';
 import {
-  MAX_TERM_YEARS,
-  MIN_TERM_YEARS,
+  INPUT_LIMITS,
   PROPERTY_CONDITION_OPTIONS,
   PROPERTY_TYPE_OPTIONS,
   RELATIONSHIP_OPTIONS,
@@ -25,13 +25,13 @@ export const EligibilityForm = ({ form }: Props) => {
           {(field) => <field.ChoiceField label='Családi állapot' options={RELATIONSHIP_OPTIONS} />}
         </form.AppField>
         <div className='flex flex-col gap-4 sm:flex-row'>
-          <form.AppField name='applicantAge' validators={{ onChange: range(16, 99) }}>
+          <form.AppField name='applicantAge' validators={{ onChange: inRange(INPUT_LIMITS.age) }}>
             {(field) => (
               <field.NumberField label={isMarried ? 'Feleség életkora' : 'Életkorod'} unit='év' />
             )}
           </form.AppField>
           {relationship !== 'SINGLE' && (
-            <form.AppField name='partnerAge' validators={{ onChange: range(16, 99) }}>
+            <form.AppField name='partnerAge' validators={{ onChange: inRange(INPUT_LIMITS.age) }}>
               {(field) => (
                 <field.NumberField
                   label={isMarried ? 'Férj életkora' : 'Társad életkora'}
@@ -41,7 +41,10 @@ export const EligibilityForm = ({ form }: Props) => {
             </form.AppField>
           )}
         </div>
-        <form.AppField name='insuredYears' validators={{ onChange: range(0, 60) }}>
+        <form.AppField
+          name='insuredYears'
+          validators={{ onChange: inRange(INPUT_LIMITS.insuredYears) }}
+        >
           {(field) => (
             <field.NumberField
               label='Folyamatos TB jogviszony'
@@ -94,10 +97,16 @@ export const EligibilityForm = ({ form }: Props) => {
 
       <FormBlock title='Ingatlan' description='Vételár, típus, állapot és elhelyezkedés'>
         <div className='flex flex-col gap-4 sm:flex-row'>
-          <form.AppField name='propertyPrice' validators={{ onChange: range(1, 2_000_000_000) }}>
+          <form.AppField
+            name='propertyPrice'
+            validators={{ onChange: inRange(INPUT_LIMITS.money) }}
+          >
             {(field) => <field.NumberField label='Vételár' unit='Ft' step={1_000_000} />}
           </form.AppField>
-          <form.AppField name='propertySize' validators={{ onChange: range(1, 2_000) }}>
+          <form.AppField
+            name='propertySize'
+            validators={{ onChange: inRange(INPUT_LIMITS.propertySize) }}
+          >
             {(field) => <field.NumberField label='Hasznos alapterület' unit='m²' />}
           </form.AppField>
         </div>
@@ -114,34 +123,68 @@ export const EligibilityForm = ({ form }: Props) => {
 
       <FormBlock title='Pénzügyek' description='Önerő, jövedelem és futamidő'>
         <div className='flex flex-col gap-4 sm:flex-row'>
-          <form.AppField name='ownFunds' validators={{ onChange: range(0, 2_000_000_000) }}>
+          <form.AppField name='ownFunds' validators={{ onChange: inRange(INPUT_LIMITS.money) }}>
             {(field) => <field.NumberField label='Önerő' unit='Ft' step={500_000} />}
           </form.AppField>
-          <form.AppField name='netIncome' validators={{ onChange: range(0, 100_000_000) }}>
+          <form.AppField
+            name='netIncome'
+            validators={{ onChange: inRange(INPUT_LIMITS.netIncome) }}
+          >
             {(field) => (
               <field.NumberField label='Háztartás nettó jövedelme' unit='Ft / hó' step={50_000} />
             )}
           </form.AppField>
         </div>
-        <form.AppField
-          name='termYears'
-          validators={{ onChange: range(MIN_TERM_YEARS, MAX_TERM_YEARS) }}
-        >
+        <form.AppField name='termYears' validators={{ onChange: inRange(TERM_YEARS) }}>
           {(field) => (
             <field.NumberField
               label='Futamidő'
               unit='év'
-              min={MIN_TERM_YEARS}
-              max={MAX_TERM_YEARS}
+              min={TERM_YEARS.min}
+              max={TERM_YEARS.max}
             />
           )}
         </form.AppField>
+        <form.AppField name='startMonth'>
+          {(field) => <field.MonthField label='Tervezett folyósítás' />}
+        </form.AppField>
+      </FormBlock>
+
+      <FormBlock
+        title='Feltételezések'
+        description='A hitelek összevetéséhez és a mai értékhez használt hozam és infláció'
+      >
+        <div className='flex flex-col gap-4 sm:flex-row'>
+          <form.AppField name='bondYield' validators={{ onChange: inRange(INPUT_LIMITS.rate) }}>
+            {(field) => (
+              <field.NumberField
+                label='Állampapír hozam'
+                unit='%'
+                step={0.1}
+                max={INPUT_LIMITS.rate.max}
+                percent
+                description='A megspórolt pénz alternatív hozama (pl. MÁP Plusz)'
+              />
+            )}
+          </form.AppField>
+          <form.AppField name='inflationRate' validators={{ onChange: inRange(INPUT_LIMITS.rate) }}>
+            {(field) => (
+              <field.NumberField
+                label='Várható infláció'
+                unit='% / év'
+                step={0.1}
+                max={INPUT_LIMITS.rate.max}
+                percent
+              />
+            )}
+          </form.AppField>
+        </div>
       </FormBlock>
     </form>
   );
 };
 
-const range = (min: number, max: number) => {
+const inRange = ({ min, max }: { min: number; max: number }) => {
   return ({ value }: { value: number }): string | undefined => {
     return value < min || value > max ? `${min} és ${max} közötti érték` : undefined;
   };

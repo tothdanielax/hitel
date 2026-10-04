@@ -1,5 +1,6 @@
+import { subsets } from './utils';
 export type LoanEvent =
-  | { month: number; type: 'suspend'; months: number; reason: string }
+  | { month: number; type: 'suspend'; months: number; optional: boolean; reason: string }
   | { month: number; type: 'forgive'; amount: number; reason: string }
   | { month: number; type: 'forgiveShare'; share: number; reason: string }
   | { month: number; type: 'reprice'; annualRate: number; reason: string };
@@ -15,8 +16,9 @@ export type Tranche = {
 
 type TimelineEntry = {
   month: number;
-  trancheId: string;
+  loan: string;
   reason: string;
+  optional: boolean;
 };
 
 type TrancheSchedule = {
@@ -34,7 +36,15 @@ export type Schedule = {
   totalForgiven: number;
   initialMonthly: number;
   averageMonthly: number;
+  presentValue: number;
+  realTotalPaid: number;
   timeline: TimelineEntry[];
+};
+
+type Rates = {
+  // Opportunity cost of money: what savings earn instead of repaying (e.g. government bonds).
+  discountRate: number;
+  inflationRate: number;
 };
 
 const annuity = (principal: number, annualRate: number, months: number): number => {
@@ -44,19 +54,23 @@ const annuity = (principal: number, annualRate: number, months: number): number 
   return (principal * rate) / (1 - (1 + rate) ** -months);
 };
 
-export const buildSchedule = (tranches: Tranche[]): Schedule => {
-  const schedules = tranches.map(simulateTranche);
+export const buildSchedule = (tranches: Tranche[], rates: Rates): Schedule => {
+  const chosen = tranches.map((tranche) =>
+    withWorthwhileOptionalEvents(tranche, rates.discountRate)
+  );
+  const schedules = chosen.map(simulateTranche);
   const length = Math.max(0, ...schedules.map((schedule) => schedule.payments.length));
   const monthlyTotals = Array.from({ length }, (_, month) =>
     schedules.reduce((sum, schedule) => sum + (schedule.payments[month] ?? 0), 0)
   );
   const totalPaid = sum(monthlyTotals);
-  const timeline = tranches
+  const timeline = chosen
     .flatMap((tranche) =>
       tranche.events.map((event) => ({
         month: event.month,
-        trancheId: tranche.id,
-        reason: event.reason
+        loan: tranche.name,
+        reason: event.reason,
+        optional: event.type === 'suspend' && event.optional
       }))
     )
     .toSorted((a, b) => a.month - b.month);
@@ -68,11 +82,35 @@ export const buildSchedule = (tranches: Tranche[]): Schedule => {
     totalForgiven: sum(schedules.map((schedule) => schedule.totalForgiven)),
     initialMonthly: monthlyTotals[0] ?? 0,
     averageMonthly: length === 0 ? 0 : totalPaid / length,
+    presentValue: presentValue(monthlyTotals, rates.discountRate),
+    realTotalPaid: presentValue(monthlyTotals, rates.inflationRate),
     timeline
   };
 };
 
-// Suspension pauses payments and extends the term by the same length, as with Babaváró.
+// An optional pause is only worth taking when deferring payments lowers their present value,
+// i.e. the loan is cheaper than what the saved installments earn meanwhile.
+const withWorthwhileOptionalEvents = (tranche: Tranche, discountRate: number): Tranche => {
+  const optional = tranche.events.filter((event) => event.type === 'suspend' && event.optional);
+  const required = tranche.events.filter((event) => !optional.includes(event));
+  const candidates = subsets(optional).map((picked) => ({
+    ...tranche,
+    events: [...required, ...picked].toSorted((a, b) => a.month - b.month)
+  }));
+  const cost = (candidate: Tranche): number => {
+    return presentValue(simulateTranche(candidate).payments, discountRate);
+  };
+  return candidates.reduce((best, candidate) => (cost(candidate) < cost(best) ? candidate : best));
+};
+
+const presentValue = (payments: number[], annualRate: number): number => {
+  return payments.reduce(
+    (total, payment, month) => total + payment / (1 + annualRate) ** ((month + 1) / 12),
+    0
+  );
+};
+
+// Suspension pauses payments and extends the term by the same length; interest keeps accruing.
 const simulateTranche = (tranche: Tranche): TrancheSchedule => {
   const payments: number[] = [];
   let balance = tranche.principal;
@@ -97,9 +135,10 @@ const simulateTranche = (tranche: Tranche): TrancheSchedule => {
       }
       if (event.type === 'reprice') rate = event.annualRate;
     }
-    if (events.length > 0) payment = annuity(balance, rate, remaining);
+    if (events.length > 0 || month === suspendedUntil) payment = annuity(balance, rate, remaining);
 
     if (month < suspendedUntil) {
+      balance += (balance * rate) / 12;
       payments.push(0);
       continue;
     }

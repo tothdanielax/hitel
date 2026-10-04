@@ -1,5 +1,5 @@
 import type { Plan } from '@hitel/core/plan';
-import { Alert, AlertDescription } from '@hitel/ui/components/alert';
+import { Alert, AlertDescription, AlertTitle } from '@hitel/ui/components/alert';
 import { Badge } from '@hitel/ui/components/badge';
 import { Button } from '@hitel/ui/components/button';
 import {
@@ -15,7 +15,7 @@ import {
   CollapsibleTrigger
 } from '@hitel/ui/components/collapsible';
 import { Paragraph } from '@hitel/ui/components/typography';
-import { ChevronDownIcon } from 'lucide-react';
+import { ChevronDownIcon, LightbulbIcon } from 'lucide-react';
 import { formatHuf } from '@/utils/currency';
 import { formatPercent } from '@/utils/percent';
 import { Eligibilities } from './eligibilities';
@@ -27,8 +27,6 @@ type Props = {
 };
 
 export const Results = ({ plan }: Props) => {
-  const subsidy = plan.schedule.totalForgiven + plan.grant;
-
   return (
     <Card>
       <CardHeader>
@@ -46,8 +44,9 @@ export const Results = ({ plan }: Props) => {
         <dl className='grid grid-cols-1 gap-4 min-[380px]:grid-cols-2'>
           <Stat label='Átlagos havi törlesztő' value={formatHuf(plan.schedule.averageMonthly)} />
           <Stat label='Teljes visszafizetés' value={formatHuf(plan.schedule.totalPaid)} />
+          <Stat label='Visszafizetés mai értéken' value={formatHuf(plan.schedule.realTotalPaid)} />
           <Stat label='Induló havi törlesztő' value={formatHuf(plan.schedule.initialMonthly)} />
-          <Stat label='Állami támogatás' value={formatHuf(subsidy)} />
+          <Stat label='Állami támogatás' value={formatHuf(plan.subsidy)} />
           <Stat label='Illeték' value={formatHuf(plan.stampDuty)} />
           <Stat
             label='Törlesztő / jövedelem (JTM)'
@@ -59,6 +58,19 @@ export const Results = ({ plan }: Props) => {
             <AlertDescription>{warning}</AlertDescription>
           </Alert>
         ))}
+        {plan.tips.length > 0 && (
+          <Alert>
+            <LightbulbIcon />
+            <AlertTitle>Tippek</AlertTitle>
+            <AlertDescription>
+              <ul className='list-disc pl-4'>
+                {plan.tips.map((tip) => (
+                  <li key={tip}>{tip}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
         <Collapsible>
           <CollapsibleTrigger render={<Button variant='outline' className='group w-full' />}>
             Részletek és idővonal

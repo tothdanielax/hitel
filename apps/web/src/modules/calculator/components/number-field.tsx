@@ -9,10 +9,21 @@ type Props = {
   step?: number;
   min?: number;
   max?: number;
+  // Stores a fraction (0.055) while the user types a percentage (5.5).
+  percent?: boolean;
 };
 
-export const NumberField = ({ label, unit, description, step = 1, min = 0, max }: Props) => {
+export const NumberField = ({
+  label,
+  unit,
+  description,
+  step = 1,
+  min = 0,
+  max,
+  percent = false
+}: Props) => {
   const field = useFieldContext<number>();
+  const scale = percent ? PERCENT_SCALE : 1;
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
 
   return (
@@ -26,16 +37,19 @@ export const NumberField = ({ label, unit, description, step = 1, min = 0, max }
         name={field.name}
         type='number'
         inputMode='numeric'
-        min={min}
-        max={max}
+        min={min * scale}
+        max={max === undefined ? undefined : max * scale}
         step={step}
-        value={field.state.value}
+        value={Math.round(field.state.value * scale * PRECISION) / PRECISION}
         aria-invalid={isInvalid}
         onBlur={field.handleBlur}
-        onChange={(event) => field.handleChange(event.target.valueAsNumber || 0)}
+        onChange={(event) => field.handleChange((event.target.valueAsNumber || 0) / scale)}
       />
       {description && <FieldDescription>{description}</FieldDescription>}
       {isInvalid && <FieldError errors={field.state.meta.errors.map((message) => ({ message }))} />}
     </Field>
   );
 };
+
+const PERCENT_SCALE = 100;
+const PRECISION = 100;

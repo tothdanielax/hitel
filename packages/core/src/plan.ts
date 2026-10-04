@@ -1,3 +1,4 @@
+import { subsets } from './utils';
 import { OFFER_KIND, type Bank, type BankOffer } from './banks/bank';
 import { BANKS } from './banks';
 import {
@@ -13,7 +14,12 @@ import {
   STAMP_DUTY,
   type GovProgram
 } from './constants';
-import { checkEligibility, type Eligibility, type HouseholdInput } from './eligibility';
+import {
+  checkEligibility,
+  normalizeInput,
+  type Eligibility,
+  type HouseholdInput
+} from './eligibility';
 import { addMonths, monthsBetween } from './months';
 import { buildSchedule, type LoanEvent, type Schedule, type Tranche } from './schedule';
 
@@ -38,6 +44,7 @@ export type PlanTimelineEntry = {
 export type Plan = {
   loans: PlannedLoan[];
   grant: number;
+  subsidy: number;
   stampDuty: number;
   shortfall: number;
   paymentToIncome: number;
@@ -46,9 +53,11 @@ export type Plan = {
   timeline: PlanTimelineEntry[];
   eligibility: Eligibility[];
   warnings: string[];
+  tips: string[];
 };
 
-export const buildPlan = (input: HouseholdInput, banks: Bank[] = BANKS): Plan => {
+export const buildPlan = (rawInput: HouseholdInput, banks: Bank[] = BANKS): Plan => {
+  const input = normalizeInput(rawInput);
   const eligibility = checkEligibility(input);
   const maxAmount = (program: GovProgram): number => {
     return eligibility.find((item) => item.program === program)?.maxAmount ?? 0;
@@ -109,7 +118,10 @@ const evaluate = (
 
   addMortgageForgiveness(input, tranches);
 
-  const schedule = buildSchedule(tranches);
+  const schedule = buildSchedule(tranches, {
+    discountRate: input.bondYield,
+    inflationRate: input.inflationRate
+  });
   const paymentToIncomeLimit = jtmLimit(input, tranches, bankOffer?.offer);
   const paymentToIncome =
     input.netIncome > 0 ? schedule.initialMonthly / input.netIncome : Infinity;
@@ -139,6 +151,7 @@ const evaluate = (
       };
     }),
     grant,
+    subsidy: schedule.totalForgiven + grant,
     stampDuty: stampDuty(input, grant > 0 ? [...programs, GOV_PROGRAM.FALUSI_CSOK] : programs),
     shortfall: remaining,
     paymentToIncome,
@@ -146,7 +159,8 @@ const evaluate = (
     schedule,
     timeline: timeline(input, tranches, schedule),
     eligibility,
-    warnings
+    warnings,
+    tips: tips(input, tranches, schedule)
   };
 };
 
@@ -179,6 +193,7 @@ const govTranche = (
                 month,
                 type: 'suspend',
                 months: BABAVARO.suspensionMonthsPerChild,
+                optional: true,
                 reason: `${order}. gyermek: szüneteltetés 3 évre`
               }
             ]
@@ -216,6 +231,7 @@ const govTranche = (
           month,
           type: 'suspend',
           months: CSOK_PLUSZ.firstChildSuspensionMonths,
+          optional: true,
           reason: '1. gyermek: 12 hónap szüneteltetés'
         }
       ];
@@ -299,11 +315,9 @@ const addMortgageForgiveness = (input: HouseholdInput, tranches: Tranche[]): voi
 };
 
 const birthsAfterStart = (input: HouseholdInput): { month: number }[] => {
-  return input.plannedChildrenMonths
-    .filter(Boolean)
-    .map((month) => ({ month: monthsBetween(input.startMonth, month) }))
-    .filter(({ month }) => month >= 0)
-    .toSorted((a, b) => a.month - b.month);
+  return input.plannedChildrenMonths.map((month) => ({
+    month: monthsBetween(input.startMonth, month)
+  }));
 };
 
 const jtmLimit = (input: HouseholdInput, tranches: Tranche[], offer?: BankOffer): number => {
@@ -343,7 +357,10 @@ const timeline = (
   }));
   const entries = [
     { month: 0, reason: 'Folyósítás, törlesztés indul' },
-    ...schedule.timeline,
+    ...schedule.timeline.map((entry) => ({
+      month: entry.month,
+      reason: `${entry.loan}: ${entry.reason}`
+    })),
     ...ends
   ].toSorted((a, b) => a.month - b.month);
   const byMonth = Map.groupBy(entries, (entry) => entry.month);
@@ -352,6 +369,28 @@ const timeline = (
     titles: group.map((entry) => entry.reason),
     monthlyAfter: monthlyAt(month)
   }));
+};
+
+// Cheap loans are worth keeping: savings earn more in government bonds than prepaying saves.
+const tips = (input: HouseholdInput, tranches: Tranche[], schedule: Schedule): string[] => {
+  const yieldText = formatRate(input.bondYield);
+  const pauses = schedule.timeline
+    .filter((entry) => entry.optional)
+    .map(
+      (entry) =>
+        `${entry.loan}, ${entry.reason}: kérelemre jár, és megéri kérni, mert a hitel kamata az állampapírhozam (${yieldText}) alatt van. A megspórolt törlesztőt érdemes állampapírba tenni.`
+    );
+  const keep = tranches
+    .filter((tranche) => tranche.annualRate < input.bondYield)
+    .map(
+      (tranche) =>
+        `${tranche.name}: kamata (${formatRate(tranche.annualRate)}) az állampapírhozam alatt van, előtörleszteni nem érdemes.`
+    );
+  return [...pauses, ...keep];
+};
+
+const formatRate = (rate: number): string => {
+  return `${(rate * 100).toLocaleString('hu-HU', { maximumFractionDigits: 2 })}%`;
 };
 
 const bestBankOffer = (banks: Bank[]): { bank: Bank; offer: BankOffer } | undefined => {
@@ -370,19 +409,14 @@ const comparePlans = (a: Plan, b: Plan): number => {
     );
   };
   return (
-    rank(a) - rank(b) || a.shortfall - b.shortfall || a.schedule.totalPaid - b.schedule.totalPaid
+    rank(a) - rank(b) ||
+    a.shortfall - b.shortfall ||
+    a.schedule.presentValue - b.schedule.presentValue
   );
 };
 
 const isCompatible = (programs: GovProgram[]): boolean => {
   return !INCOMPATIBLE_PROGRAMS.some(([a, b]) => programs.includes(a) && programs.includes(b));
-};
-
-const subsets = <T>(items: T[]): T[][] => {
-  return items.reduce<T[][]>(
-    (all, item) => [...all, ...all.map((subset) => [...subset, item])],
-    [[]]
-  );
 };
 
 const clamp = (value: number, min: number, max: number): number => {

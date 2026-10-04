@@ -1,5 +1,8 @@
+import { DEFAULT_BOND_YIELD, DEFAULT_INFLATION_RATE } from '@hitel/core/constants';
 import type { HouseholdInput } from '@hitel/core/eligibility';
-import { nextMonth } from '@/utils/date';
+import { addMonths } from '@hitel/core/months';
+
+export const BUILD_MONTH: string = import.meta.env.VITE_BUILD_MONTH;
 
 export const DEFAULT_HOUSEHOLD: HouseholdInput = {
   relationship: 'MARRIED',
@@ -19,7 +22,9 @@ export const DEFAULT_HOUSEHOLD: HouseholdInput = {
   ownFunds: 10_000_000,
   netIncome: 1_200_000,
   termYears: 25,
-  startMonth: nextMonth()
+  startMonth: addMonths(BUILD_MONTH, 1),
+  bondYield: DEFAULT_BOND_YIELD,
+  inflationRate: DEFAULT_INFLATION_RATE
 };
 
 export const RELATIONSHIP_OPTIONS = {
@@ -53,5 +58,11 @@ export const PROGRAM_NAMES = {
   MORTGAGE_FORGIVENESS: 'Jelzáloghitel-elengedés'
 } as const;
 
-export const MIN_TERM_YEARS = 5;
-export const MAX_TERM_YEARS = 35;
+export const INPUT_LIMITS = {
+  age: { min: 16, max: 99 },
+  insuredYears: { min: 0, max: 60 },
+  money: { min: 0, max: 2_000_000_000 },
+  propertySize: { min: 1, max: 2_000 },
+  netIncome: { min: 0, max: 100_000_000 },
+  rate: { min: 0, max: 0.3 }
+} as const;

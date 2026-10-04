@@ -40,6 +40,8 @@ const household = (overrides: Partial<HouseholdInput>): HouseholdInput => {
     netIncome: 1_500_000,
     termYears: 25,
     startMonth: '2026-11',
+    bondYield: 0.0548,
+    inflationRate: 0.025,
     ...overrides
   };
 };
@@ -167,6 +169,40 @@ describe('buildPlan', () => {
 
     expect(birth?.titles.length).toBeGreaterThan(1);
     expect(new Set(plan.timeline.map((entry) => entry.month)).size).toBe(plan.timeline.length);
+  });
+
+  it('ignores blank and past planned-child rows', () => {
+    const plan = buildPlan(
+      household({ relationship: 'MARRIED', plannedChildrenMonths: ['', '2020-01'] }),
+      [BANK]
+    );
+
+    expect(plan.eligibility.find((item) => item.program === 'CSOK_PLUSZ')?.eligible).toBe(false);
+  });
+
+  it('counts planned children by date, not entry order', () => {
+    const input = household({ relationship: 'MARRIED', propertySize: 70 });
+    const sorted = buildPlan({ ...input, plannedChildrenMonths: ['2027-11', '2031-11'] }, [BANK]);
+    const reversed = buildPlan({ ...input, plannedChildrenMonths: ['2031-11', '2027-11'] }, [BANK]);
+
+    expect(reversed.eligibility).toEqual(sorted.eligibility);
+  });
+
+  it('clamps an empty term instead of dropping the loans', () => {
+    const plan = buildPlan(household({ termYears: 0 }), [BANK]);
+
+    expect(plan.schedule.initialMonthly).toBeGreaterThan(0);
+  });
+
+  it('recommends pausing Babaváró after the first child', () => {
+    const plan = buildPlan(
+      household({ relationship: 'MARRIED', plannedChildrenMonths: ['2027-09'] }),
+      [BANK]
+    );
+
+    expect(plan.tips.some((tip) => tip.startsWith('Babaváró, 1. gyermek: szüneteltetés'))).toBe(
+      true
+    );
   });
 
   it('warns when installments exceed the JTM limit', () => {
