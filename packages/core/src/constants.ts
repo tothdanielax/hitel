@@ -15,7 +15,6 @@ export type GovProgram = keyof typeof GOV_PROGRAM;
 export type PropertyType = 'APARTMENT' | 'HOUSE';
 
 export const MONTHS_PER_YEAR = 12;
-export const PERCENT = 100;
 export const MILLION = 1_000_000;
 
 // ISO month ('YYYY-MM') as produced by <input type="month">.

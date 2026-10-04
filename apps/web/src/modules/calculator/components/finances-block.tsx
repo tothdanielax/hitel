@@ -1,7 +1,7 @@
 import { TERM_YEARS } from '@hitel/core/constants';
 import { INPUT_LIMITS, MONEY_STEP } from '../constants';
 import type { CalculatorForm } from '../hooks/use-calculator-form';
-import { inRange } from '../utils/validators';
+import { inRange } from '@hitel/core/utils/math';
 import { FormBlock } from './form-block';
 
 type Props = {

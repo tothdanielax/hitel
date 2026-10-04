@@ -8,11 +8,10 @@ import {
 import { Paragraph } from '@hitel/ui/components/paragraph';
 import { useStore } from '@tanstack/react-form';
 import { ChevronDownIcon, RotateCcwIcon } from 'lucide-react';
-import { formatDate } from '@/utils/formatters/date';
-import { formatPercent } from '@/utils/formatters/percent';
+import { formatDate } from '@hitel/core/utils/date';
+import { formatPercent, inRange } from '@hitel/core/utils/math';
 import { INPUT_LIMITS, RATE_STEP } from '../constants';
 import type { CalculatorForm } from '../hooks/use-calculator-form';
-import { inRange } from '../utils/validators';
 import { FormBlock } from './form-block';
 
 type Props = {

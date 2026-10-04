@@ -20,11 +20,11 @@ import {
   type Eligibility,
   type HouseholdInput
 } from './eligibility';
-import { addMonths, monthsBetween } from './months';
 import { buildSchedule, type LoanEvent, type Schedule, type Tranche } from './schedule';
 import { DEFAULT_SETTINGS, type OfferSetting, type PlanSettings } from './settings';
-import { formatMillions, formatRate } from './utils/formatters';
-import { arrangements, clamp } from './utils/math';
+import { formatMillions } from './utils/currency';
+import { addMonths, monthsBetween } from './utils/date';
+import { arrangements, clamp, formatPercent } from './utils/math';
 
 export type PlannedLoan = {
   id: string;
@@ -204,7 +204,7 @@ const govTranche = (context: Context, program: GovProgram, amount: number): Plan
         BABAVARO.maxTermYears * MONTHS_PER_YEAR
       ),
       events: babavaroEvents(input),
-      note: `Kamatmentes, gyermekenként ${BABAVARO.suspensionMonthsPerChild / MONTHS_PER_YEAR} év szüneteltetés, a 2. gyermeknél ${formatRate(BABAVARO.forgivenessRateByChild[2] ?? 0)}, a 3.-nál teljes elengedés`
+      note: `Kamatmentes, gyermekenként ${BABAVARO.suspensionMonthsPerChild / MONTHS_PER_YEAR} év szüneteltetés, a 2. gyermeknél ${formatPercent(BABAVARO.forgivenessRateByChild[2] ?? 0)}, a 3.-nál teljes elengedés`
     };
   }
 
@@ -219,7 +219,7 @@ const govTranche = (context: Context, program: GovProgram, amount: number): Plan
         CSOK_PLUSZ.maxTermYears * MONTHS_PER_YEAR
       ),
       events: csokPluszEvents(input),
-      note: `Fix ${formatRate(csokPluszRate)}, a ${CSOK_PLUSZ.forgivenessFromChildOrder}. gyermektől gyermekenként ${formatMillions(CSOK_PLUSZ.forgivenessPerChild)} elengedés`
+      note: `Fix ${formatPercent(csokPluszRate)}, a ${CSOK_PLUSZ.forgivenessFromChildOrder}. gyermektől gyermekenként ${formatMillions(CSOK_PLUSZ.forgivenessPerChild)} elengedés`
     };
   }
 
@@ -235,7 +235,7 @@ const govTranche = (context: Context, program: GovProgram, amount: number): Plan
       annualRate,
       termMonths: Math.min(desiredMonths, OTTHON_START.maxTermYears * MONTHS_PER_YEAR),
       events: [],
-      note: `Fix ${formatRate(annualRate)} a teljes futamidőre`
+      note: `Fix ${formatPercent(annualRate)} a teljes futamidőre`
     };
   }
 
@@ -245,7 +245,7 @@ const govTranche = (context: Context, program: GovProgram, amount: number): Plan
     annualRate: falusiCsokLoanRate,
     termMonths: Math.min(desiredMonths, FALUSI_CSOK_LOAN.maxTermYears * MONTHS_PER_YEAR),
     events: [],
-    note: `Fix ${formatRate(falusiCsokLoanRate)} a teljes futamidőre`
+    note: `Fix ${formatPercent(falusiCsokLoanRate)} a teljes futamidőre`
   };
 };
 
@@ -263,7 +263,7 @@ const babavaroEvents = (input: HouseholdInput): LoanEvent[] => {
                 month,
                 type: 'forgiveShare',
                 share,
-                reason: `${order}. gyermek: ${formatRate(share)} elengedés`
+                reason: `${order}. gyermek: ${formatPercent(share)} elengedés`
               }
             ]
           : [];
@@ -318,7 +318,7 @@ const bankTranche = (context: Context, amount: number, offer: OfferSetting): Pla
             month: fixationMonths,
             type: 'reprice',
             annualRate: repriceRate,
-            reason: `Kamatperiódus vége, átárazás ${formatRate(repriceRate)} kamatra`
+            reason: `Kamatperiódus vége, átárazás ${formatPercent(repriceRate)} kamatra`
           }
         ]
       : [];
@@ -334,7 +334,7 @@ const bankTranche = (context: Context, amount: number, offer: OfferSetting): Pla
     note:
       offer.fixationYears === FIXED_FOR_TERM
         ? 'Végig fix kamat'
-        : `${offer.fixationYears} év kamatfixálás, utána ${formatRate(repriceRate)} (becslés)`
+        : `${offer.fixationYears} év kamatfixálás, utána ${formatPercent(repriceRate)} (becslés)`
   };
 };
 
@@ -415,7 +415,7 @@ const timeline = (input: HouseholdInput, schedule: Schedule): PlanTimelineEntry[
 
 // Cheap loans are worth keeping: savings earn more in government bonds than prepaying saves.
 const tips = (settings: PlanSettings, tranches: PlanTranche[], schedule: Schedule): string[] => {
-  const bondYield = formatRate(settings.bondYield);
+  const bondYield = formatPercent(settings.bondYield);
   const pauses = schedule.timeline
     .filter((entry) => entry.optional)
     .map(
@@ -426,7 +426,7 @@ const tips = (settings: PlanSettings, tranches: PlanTranche[], schedule: Schedul
     .filter((tranche) => tranche.annualRate < settings.bondYield)
     .map(
       (tranche) =>
-        `${tranche.name}: kamata (${formatRate(tranche.annualRate)}) az állampapírhozam alatt van, előtörleszteni nem érdemes.`
+        `${tranche.name}: kamata (${formatPercent(tranche.annualRate)}) az állampapírhozam alatt van, előtörleszteni nem érdemes.`
     );
   return [...pauses, ...keep];
 };

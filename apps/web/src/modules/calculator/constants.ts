@@ -1,5 +1,5 @@
 import type { HouseholdInput } from '@hitel/core/eligibility';
-import { addMonths } from '@hitel/core/months';
+import { addMonths } from '@hitel/core/utils/date';
 import { DEFAULT_SETTINGS, type PlanSettings } from '@hitel/core/settings';
 
 export const BUILD_MONTH: string = import.meta.env.VITE_BUILD_MONTH;

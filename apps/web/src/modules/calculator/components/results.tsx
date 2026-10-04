@@ -15,8 +15,8 @@ import {
   CollapsibleTrigger
 } from '@hitel/ui/components/collapsible';
 import { ChevronDownIcon, LightbulbIcon } from 'lucide-react';
-import { formatHuf } from '@/utils/formatters/currency';
-import { formatPercent } from '@/utils/formatters/percent';
+import { formatHuf } from '@hitel/core/utils/currency';
+import { formatPercent } from '@hitel/core/utils/math';
 import { Eligibilities } from './eligibilities';
 import { LoanList } from './loan-list';
 import { Stat } from './stat';

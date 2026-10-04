@@ -1,4 +1,4 @@
-import { addMonths, currentMonth } from '@hitel/core/months';
+import { addMonths, currentMonth } from '@hitel/core/utils/date';
 import { buildPlan } from '@hitel/core/plan';
 import { createFormHook, useStore } from '@tanstack/react-form';
 import { useEffect } from 'react';

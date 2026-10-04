@@ -1,6 +1,17 @@
-import { ISO_MONTH_LENGTH, MONTHS_PER_YEAR } from './constants';
+import { ISO_MONTH_LENGTH, MONTHS_PER_YEAR } from '../constants';
 
 // ISO months ('YYYY-MM') keep dates timezone free.
+const MONTH = new Intl.DateTimeFormat('hu-HU', { year: 'numeric', month: 'long', timeZone: 'UTC' });
+const DAY = new Intl.DateTimeFormat('hu-HU', { dateStyle: 'medium', timeZone: 'UTC' });
+
+export const formatMonth = (isoMonth: string): string => {
+  return MONTH.format(new Date(`${isoMonth}-01T00:00:00Z`));
+};
+
+export const formatDate = (isoDate: string): string => {
+  return DAY.format(new Date(`${isoDate}T00:00:00Z`));
+};
+
 export const monthsBetween = (from: string, to: string): number => {
   return toIndex(to) - toIndex(from);
 };

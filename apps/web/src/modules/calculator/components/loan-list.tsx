@@ -2,8 +2,8 @@ import type { PlannedLoan } from '@hitel/core/plan';
 import { MONTHS_PER_YEAR } from '@hitel/core/constants';
 import { Heading } from '@hitel/ui/components/heading';
 import { Paragraph } from '@hitel/ui/components/paragraph';
-import { formatHuf } from '@/utils/formatters/currency';
-import { formatPercent } from '@/utils/formatters/percent';
+import { formatHuf } from '@hitel/core/utils/currency';
+import { formatPercent } from '@hitel/core/utils/math';
 import { Stat } from './stat';
 
 type Props = {

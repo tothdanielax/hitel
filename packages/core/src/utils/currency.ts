@@ -1,3 +1,5 @@
+import { MILLION } from '../constants';
+
 const HUF = new Intl.NumberFormat('hu-HU', {
   style: 'currency',
   currency: 'HUF',
@@ -6,4 +8,8 @@ const HUF = new Intl.NumberFormat('hu-HU', {
 
 export const formatHuf = (value: number): string => {
   return HUF.format(value);
+};
+
+export const formatMillions = (amount: number): string => {
+  return `${(amount / MILLION).toLocaleString('hu-HU')} millió Ft`;
 };

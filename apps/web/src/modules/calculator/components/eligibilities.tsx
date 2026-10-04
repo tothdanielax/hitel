@@ -3,7 +3,7 @@ import { PROGRAMS } from '@hitel/core/constants';
 import { Badge } from '@hitel/ui/components/badge';
 import { Heading } from '@hitel/ui/components/heading';
 import { Paragraph } from '@hitel/ui/components/paragraph';
-import { formatHuf } from '@/utils/formatters/currency';
+import { formatHuf } from '@hitel/core/utils/currency';
 
 type Props = {
   eligibility: Eligibility[];

@@ -22,3 +22,15 @@ export const arrangements = <T>(items: T[]): T[][] => {
     )
   ];
 };
+
+const PERCENT = new Intl.NumberFormat('hu-HU', { style: 'percent', maximumFractionDigits: 2 });
+
+export const formatPercent = (value: number): string => {
+  return PERCENT.format(value);
+};
+
+export const inRange = ({ min, max }: { min: number; max: number }) => {
+  return ({ value }: { value: number }): string | undefined => {
+    return value < min || value > max ? `${min} és ${max} közötti érték` : undefined;
+  };
+};

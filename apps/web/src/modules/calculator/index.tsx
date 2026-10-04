@@ -2,7 +2,7 @@ import { Heading } from '@hitel/ui/components/heading';
 import { Paragraph } from '@hitel/ui/components/paragraph';
 import { RULES_AS_OF } from '@hitel/core/constants';
 import { APP_DESCRIPTION, APP_NAME } from '@/constants';
-import { formatDate } from '@/utils/formatters/date';
+import { formatDate } from '@hitel/core/utils/date';
 import { EligibilityForm } from './components/eligibility-form';
 import { Results } from './components/results';
 import { useCalculatorForm } from './hooks/use-calculator-form';

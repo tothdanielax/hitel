@@ -1,8 +1,8 @@
 import type { PlanTimelineEntry } from '@hitel/core/plan';
 import { Heading } from '@hitel/ui/components/heading';
 import { Paragraph } from '@hitel/ui/components/paragraph';
-import { formatHuf } from '@/utils/formatters/currency';
-import { formatMonth } from '@/utils/formatters/date';
+import { formatHuf } from '@hitel/core/utils/currency';
+import { formatMonth } from '@hitel/core/utils/date';
 
 type Props = {
   events: PlanTimelineEntry[];

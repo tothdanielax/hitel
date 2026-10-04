@@ -12,7 +12,7 @@ import {
   TERM_YEARS,
   type PropertyType
 } from './constants';
-import { monthsBetween } from './months';
+import { monthsBetween } from './utils/date';
 
 type Relationship = 'SINGLE' | 'MARRIED' | 'PARTNERS';
 type PropertyCondition = 'NEW' | 'USED';

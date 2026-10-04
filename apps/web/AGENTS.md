@@ -20,10 +20,8 @@ apps/web/src/
 │       ├── index.tsx          # Module entry point
 │       ├── components/        # Module-only components
 │       ├── hooks/             # Module-only hooks
-│       └── utils/             # Module-only utilities
 ├── components/                # Shared cross-module components
 ├── hooks/                     # Shared hooks
-├── utils/                     # Shared utilities (`formatters/` for currency, date, percent)
 ├── constants.ts               # App (UI) constants, business constants live in @hitel/core
 └── router.tsx                 # Router factory
 ```
@@ -33,5 +31,5 @@ apps/web/src/
 - `routeTree.gen.ts` is generated, don't edit it
 - `dev` script calls the local `vp` binary: the global one loads its own Vite copy and TanStack Start returns 404 (vite-plus issue #1391)
 - Modules CANNOT import from other modules. Shared code → `src/{folder}/` or `@hitel/ui`
-- No business rules in this package, call `@hitel/core`
+- No business rules or helpers in this package: rules and utils (formatters, validators) live in `@hitel/core`
 - Use `@hitel/ui` for base components (e.g. `Button`, `Card`)
