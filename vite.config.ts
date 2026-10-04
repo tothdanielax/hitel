@@ -15,7 +15,8 @@ export default defineConfig({
   },
 
   fmt: {
-    ignorePatterns: ['**/routeTree.gen.ts'],
+    // Agent skills are vendored as published, so updates stay clean diffs.
+    ignorePatterns: ['**/routeTree.gen.ts', '.claude/skills/**'],
     trailingComma: 'none',
     singleQuote: true,
     jsxSingleQuote: true,

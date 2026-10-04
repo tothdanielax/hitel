@@ -28,6 +28,7 @@ CLAUDE.md points here for compatibility.
 - UI package: `packages/ui/` (see `packages/ui/AGENTS.md`)
 - Government loan research: `docs/gov-loans.md`
 - Conventions: see `docs/`
+- Agent skills: `.claude/skills/` (shadcn from github.com/shadcn-ui/ui `skills/shadcn`, ReUI from mcp.reui.io), vendored as published, update by re-downloading
 
 ## Layers
 
