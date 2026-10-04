@@ -65,6 +65,12 @@ export const EXCLUDABLE_OPTIONS: Record<string, string> = Object.fromEntries(
   EXCLUDABLE_PROGRAMS.map((program) => [program, PROGRAMS[program].name])
 );
 
+export const LINKS = {
+  bondCalculator: 'https://allampapirkalkulator.hu/',
+  // The settlement list is the annex of the decree.
+  falusiCsokSettlements: 'https://net.jogtar.hu/jogszabaly?docid=a2300302.kor'
+} as const;
+
 export const INPUT_LIMITS = {
   age: { min: 16, max: 99 },
   insuredYears: { min: 0, max: 60 },

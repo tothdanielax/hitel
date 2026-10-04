@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { arrangements, clamp, subsets, sum } from './math';
+import { arrangements, clamp, formatPercent, inRange, subsets, sum } from './math';
 
 describe('sum', () => {
   it('adds values', () => {
@@ -34,5 +34,17 @@ describe('arrangements', () => {
 
   it('grows to 65 for four items', () => {
     expect(arrangements([1, 2, 3, 4])).toHaveLength(65);
+  });
+});
+
+describe('inRange', () => {
+  it('accepts values inside the range', () => {
+    expect(inRange({ min: 0, max: 0.03 })({ value: 0.03 })).toBeUndefined();
+  });
+
+  it('formats the bounds in the message', () => {
+    expect(inRange({ min: 0, max: 0.03 }, formatPercent)({ value: 0.031 })).toBe(
+      `${formatPercent(0)} és ${formatPercent(0.03)} közötti érték`
+    );
   });
 });

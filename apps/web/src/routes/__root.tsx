@@ -27,7 +27,10 @@ export const Route = createRootRoute({
       { title: APP_NAME },
       { name: 'description', content: APP_DESCRIPTION }
     ],
-    links: [{ rel: 'stylesheet', href: globalsCss }]
+    links: [
+      { rel: 'stylesheet', href: globalsCss },
+      { rel: 'icon', type: 'image/svg+xml', href: `${import.meta.env.BASE_URL}favicon.svg` }
+    ]
   }),
   shellComponent: RootDocument,
   component: Outlet

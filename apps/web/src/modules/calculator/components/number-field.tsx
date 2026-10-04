@@ -7,12 +7,13 @@ import {
   NumberFieldIncrement,
   NumberFieldInput
 } from '@hitel/ui/components/reui/number-field';
+import type { ReactNode } from 'react';
 import { useFieldContext } from '../hooks/form-context';
 
 type Props = {
   label: string;
   unit?: string;
-  description?: string;
+  description?: ReactNode;
   step?: number;
   // Stores a fraction (0.055) and shows it as a percentage (5,5%).
   percent?: boolean;

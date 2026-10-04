@@ -14,12 +14,13 @@ export const Calculator = () => {
 
   return (
     <main className='mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:px-8 md:py-10'>
-      <header className='flex items-start justify-between gap-4'>
+      {/* Narrow screens put the buttons on their own first row. */}
+      <header className='flex flex-col-reverse gap-4 sm:flex-row sm:items-start sm:justify-between'>
         <div className='flex flex-col gap-1'>
           <Heading as='h1'>{APP_NAME}</Heading>
           <Paragraph muted>{APP_DESCRIPTION}</Paragraph>
         </div>
-        <div className='flex shrink-0 gap-2'>
+        <div className='flex shrink-0 justify-end gap-2'>
           <ShareButton />
           <ThemeToggle />
         </div>
@@ -37,9 +38,11 @@ export const Calculator = () => {
       </div>
       <footer>
         <Paragraph size='sm' muted>
-          Szabályok állapota: {formatDate(RULES_AS_OF)} A számítás tájékoztató jellegű, nem minősül
-          ajánlatnak. A banki kamatok kézzel frissített alapértékek, a Banki ajánlatok blokkban
-          átírhatók.
+          Szabályok állapota: {formatDate(RULES_AS_OF)}
+        </Paragraph>
+        <Paragraph size='sm' muted>
+          A számítás tájékoztató jellegű, nem minősül ajánlatnak. A banki kamatok kézzel frissített
+          alapértékek, a Banki ajánlatok blokkban átírhatók.
         </Paragraph>
       </footer>
     </main>

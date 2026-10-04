@@ -29,8 +29,13 @@ export const formatPercent = (value: number): string => {
   return PERCENT.format(value);
 };
 
-export const inRange = ({ min, max }: { min: number; max: number }) => {
+export const inRange = (
+  { min, max }: { min: number; max: number },
+  format: (value: number) => string = String
+) => {
   return ({ value }: { value: number }): string | undefined => {
-    return value < min || value > max ? `${min} és ${max} közötti érték` : undefined;
+    return value < min || value > max
+      ? `${format(min)} és ${format(max)} közötti érték`
+      : undefined;
   };
 };

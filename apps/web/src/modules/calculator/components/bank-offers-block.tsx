@@ -1,10 +1,12 @@
 import { DEFAULT_SETTINGS } from '@hitel/core/settings';
 import { Button } from '@hitel/ui/components/button';
+import { Checkbox } from '@hitel/ui/components/checkbox';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger
 } from '@hitel/ui/components/collapsible';
+import { Field, FieldLabel } from '@hitel/ui/components/field';
 import {
   Frame,
   FrameDescription,
@@ -18,6 +20,7 @@ import { formatDate } from '@hitel/core/utils/date';
 import { formatPercent, inRange } from '@hitel/core/utils/math';
 import { INPUT_LIMITS, RATE_STEP } from '../constants';
 import type { CalculatorForm } from '../hooks/use-calculator-form';
+import { ExternalLink } from './external-link';
 import { FormBlock } from './form-block';
 
 type Props = {
@@ -53,53 +56,76 @@ export const BankOffersBlock = ({ form }: Props) => {
             <RotateCcwIcon />
             Alapértékek visszaállítása
           </Button>
-          {offers.map((offer, index) => (
-            <Frame key={offer.id} spacing='sm'>
-              <FrameHeader className='flex-row items-start justify-between gap-3'>
-                <div className='flex min-w-0 flex-col gap-0.5'>
-                  <FrameTitle>
-                    {offer.bankName} - {offer.product}
-                  </FrameTitle>
-                  <FrameDescription className='text-xs'>
-                    {KIND_LABEL[offer.kind]}
-                    {offer.thm !== undefined && `, THM ${formatPercent(offer.thm)}`}
-                    {', forrás: '}
-                    <a
-                      href={offer.source.url}
-                      target='_blank'
-                      rel='noreferrer'
-                      className='underline'
-                    >
-                      {formatDate(offer.source.asOf)}
-                    </a>
-                  </FrameDescription>
-                </div>
-                <form.AppField name={`settings.offers[${index}].enabled`}>
-                  {(field) => <field.CheckboxField label='Számol' />}
-                </form.AppField>
-              </FrameHeader>
-              <FramePanel className='flex flex-col gap-4 sm:flex-row'>
-                <form.AppField
-                  name={`settings.offers[${index}].annualRate`}
-                  validators={{ onChange: inRange(INPUT_LIMITS.rate) }}
-                >
-                  {(field) => <field.NumberField label='Kamat' step={RATE_STEP} percent />}
-                </form.AppField>
-                <form.AppField
-                  name={`settings.offers[${index}].fixationYears`}
-                  validators={{ onChange: inRange(INPUT_LIMITS.fixationYears) }}
-                >
-                  {(field) => (
-                    <field.NumberField
-                      label='Kamatfixálás'
-                      unit='év'
-                      description='0 = a teljes futamidőre fix'
+          {[
+            ...Map.groupBy(
+              offers.map((offer, index) => ({ offer, index })),
+              ({ offer }) => offer.bankName
+            )
+          ].map(([bankName, bankOffers]) => {
+            const enabledCount = bankOffers.filter(({ offer }) => offer.enabled).length;
+            return (
+              <Frame key={bankName} spacing='sm'>
+                <FrameHeader className='flex-row items-center justify-between gap-3'>
+                  <FrameTitle>{bankName}</FrameTitle>
+                  <Field orientation='horizontal' className='w-auto shrink-0'>
+                    <Checkbox
+                      id={`bank-${bankName}`}
+                      checked={enabledCount === bankOffers.length}
+                      indeterminate={enabledCount > 0 && enabledCount < bankOffers.length}
+                      onCheckedChange={(checked) =>
+                        bankOffers.forEach(({ index }) =>
+                          form.setFieldValue(`settings.offers[${index}].enabled`, checked)
+                        )
+                      }
                     />
-                  )}
-                </form.AppField>
-              </FramePanel>
-            </Frame>
-          ))}
+                    <FieldLabel htmlFor={`bank-${bankName}`} className='font-normal'>
+                      Mind
+                    </FieldLabel>
+                  </Field>
+                </FrameHeader>
+                {bankOffers.map(({ offer, index }) => (
+                  <FramePanel key={offer.id} className='flex flex-col gap-4'>
+                    <div className='flex items-start justify-between gap-3'>
+                      <div className='flex min-w-0 flex-col gap-0.5'>
+                        <FrameTitle>{offer.product}</FrameTitle>
+                        <FrameDescription className='text-xs'>
+                          {KIND_LABEL[offer.kind]}
+                          {offer.thm !== undefined && `, THM ${formatPercent(offer.thm)}`}
+                          {', forrás: '}
+                          <ExternalLink href={offer.source.url}>
+                            {formatDate(offer.source.asOf)}
+                          </ExternalLink>
+                        </FrameDescription>
+                      </div>
+                      <form.AppField name={`settings.offers[${index}].enabled`}>
+                        {(field) => <field.CheckboxField label='Számol' />}
+                      </form.AppField>
+                    </div>
+                    <div className='flex flex-col gap-4 sm:flex-row'>
+                      <form.AppField
+                        name={`settings.offers[${index}].annualRate`}
+                        validators={{ onChange: inRange(INPUT_LIMITS.rate, formatPercent) }}
+                      >
+                        {(field) => <field.NumberField label='Kamat' step={RATE_STEP} percent />}
+                      </form.AppField>
+                      <form.AppField
+                        name={`settings.offers[${index}].fixationYears`}
+                        validators={{ onChange: inRange(INPUT_LIMITS.fixationYears) }}
+                      >
+                        {(field) => (
+                          <field.NumberField
+                            label='Kamatfixálás'
+                            unit='év'
+                            description='0 = a teljes futamidőre fix'
+                          />
+                        )}
+                      </form.AppField>
+                    </div>
+                  </FramePanel>
+                ))}
+              </Frame>
+            );
+          })}
         </CollapsibleContent>
       </Collapsible>
     </FormBlock>

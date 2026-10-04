@@ -3,8 +3,10 @@ import {
   MONEY_STEP,
   PROPERTY_CONDITION_OPTIONS,
   PROPERTY_TYPE_OPTIONS,
-  SETTLEMENT_OPTIONS
+  SETTLEMENT_OPTIONS,
+  LINKS
 } from '../constants';
+import { ExternalLink } from './external-link';
 import type { CalculatorForm } from '../hooks/use-calculator-form';
 import { inRange } from '@hitel/core/utils/math';
 import { FormBlock } from './form-block';
@@ -44,7 +46,21 @@ export const PropertyBlock = ({ form }: Props) => {
         {(field) => <field.ChoiceField label='Állapot' options={PROPERTY_CONDITION_OPTIONS} />}
       </form.AppField>
       <form.AppField name='settlementType'>
-        {(field) => <field.ChoiceField label='Település' options={SETTLEMENT_OPTIONS} />}
+        {(field) => (
+          <field.ChoiceField
+            label='Település'
+            options={SETTLEMENT_OPTIONS}
+            description={
+              <>
+                Falusi CSOK csak kedvezményezett kistelepülésen jár, a listát a{' '}
+                <ExternalLink href={LINKS.falusiCsokSettlements}>
+                  302/2023. Korm. rendelet melléklete
+                </ExternalLink>{' '}
+                tartalmazza.
+              </>
+            }
+          />
+        )}
       </form.AppField>
     </FormBlock>
   );

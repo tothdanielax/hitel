@@ -28,6 +28,7 @@ export const FinancesBlock = ({ form }: Props) => {
               label='Háztartás nettó jövedelme'
               unit='Ft / hó'
               step={MONEY_STEP.income}
+              description='Nettó, mert az MNB jövedelemarányos törlesztési korlátja (JTM) a nettó jövedelemből számol'
             />
           )}
         </form.AppField>
