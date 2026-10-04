@@ -1,0 +1,10 @@
+{
+  "extends": "@total-typescript/tsconfig/bundler/dom",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "erasableSyntaxOnly": true,
+    "exactOptionalPropertyTypes": true,
+    "rootDir": "./src"
+  },
+  "include": ["./src"]
+}

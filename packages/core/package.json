@@ -1,0 +1,12 @@
+{
+  "name": "@hitel/core",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "clean": "rm -rf node_modules",
+    "typecheck": "tsc --noEmit"
+  }
+}

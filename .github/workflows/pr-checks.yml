@@ -1,0 +1,50 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '**/*.js'
+      - '**/*.jsx'
+      - '**/package.json'
+      - 'bun.lock'
+      - '**/tsconfig*.json'
+      - '**/vite.config.ts'
+      - '.github/workflows/*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# prevent multiple check runs for the same PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    name: Checks
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup VP
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: '26'
+          cache: true
+
+      - name: Run Checks
+        run: vp check
+
+      - name: Run Typecheck
+        run: vp run typecheck
+
+      - name: Run Tests
+        run: vp test

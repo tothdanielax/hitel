@@ -1,0 +1,254 @@
+{
+  "formatter": "language_server",
+  "format_on_save": "on",
+  "semantic_tokens": "combined",
+  "languages": {
+    "JavaScript": {
+      "formatter": {
+        "language_server": {
+          "name": "oxfmt"
+        }
+      },
+      "code_actions_on_format": {
+        "source.fixAll.oxc": true,
+        "source.organizeImports.oxc": true
+      },
+      "language_servers": ["tsgo", "oxfmt", "oxlint", "effect-tsgo"]
+    },
+    "TypeScript": {
+      "formatter": {
+        "language_server": {
+          "name": "oxfmt"
+        }
+      },
+      "code_actions_on_format": {
+        "source.fixAll.oxc": true,
+        "source.organizeImports.oxc": true
+      },
+      "language_servers": ["tsgo", "oxfmt", "oxlint", "effect-tsgo"]
+    },
+    "TSX": {
+      "formatter": {
+        "language_server": {
+          "name": "oxfmt"
+        }
+      },
+      "code_actions_on_format": {
+        "source.fixAll.oxc": true,
+        "source.organizeImports.oxc": true
+      },
+      "language_servers": ["tsgo", "tailwindcss-language-server", "oxfmt", "oxlint", "effect-tsgo"]
+    },
+    "CSS": {
+      "formatter": {
+        "language_server": {
+          "name": "oxfmt"
+        }
+      },
+      "code_actions_on_format": {
+        "source.fixAll.oxc": true,
+        "source.organizeImports.oxc": true
+      },
+      "language_servers": ["tailwindcss-language-server", "oxfmt"]
+    },
+    "HTML": {
+      "formatter": {
+        "language_server": {
+          "name": "oxfmt"
+        }
+      },
+      "code_actions_on_format": {
+        "source.fixAll.oxc": true,
+        "source.organizeImports.oxc": true
+      },
+      "language_servers": ["vscode-html-language-server", "oxfmt"]
+    },
+    "Markdown": {
+      "formatter": {
+        "language_server": {
+          "name": "oxfmt"
+        }
+      },
+      "code_actions_on_format": {
+        "source.fixAll.oxc": true,
+        "source.organizeImports.oxc": true
+      },
+      "language_servers": ["markdown-oxide", "oxfmt"]
+    },
+    "JSON": {
+      "formatter": {
+        "language_server": {
+          "name": "oxfmt"
+        }
+      },
+      "code_actions_on_format": {
+        "source.fixAll.oxc": true,
+        "source.organizeImports.oxc": true
+      },
+      "language_servers": ["json-language-server", "package-version-server", "oxfmt"]
+    },
+    "JSONC": {
+      "formatter": {
+        "language_server": {
+          "name": "oxfmt"
+        }
+      },
+      "code_actions_on_format": {
+        "source.fixAll.oxc": true,
+        "source.organizeImports.oxc": true
+      },
+      "language_servers": ["json-language-server", "oxfmt"]
+    }
+  },
+  "file_scan_exclusions": [
+    // default
+    "**/.git",
+    "**/.svn",
+    "**/.hg",
+    "**/.jj",
+    "**/.sl",
+    "**/.repo",
+    "**/CVS",
+    "**/.DS_Store",
+    "**/Thumbs.db",
+    "**/.classpath",
+    "**/.settings",
+
+    // extra
+    "**/dist",
+    "**/.vite-hooks/_",
+    "**/*lock.yml",
+    "**/*lock.yaml"
+
+    // do NOT add node_modules as it breaks import suggests for TS/TSX/JS
+    // review this when Zed implements exlusion scopes
+    // https://github.com/zed-industries/zed/issues/21018
+    // **/node_modules
+  ],
+  "prettier": {
+    "allowed": false
+  },
+  "lsp": {
+    "oxfmt": {
+      "initialization_options": {
+        "settings": {
+          "disableNestedConfig": false,
+          "fixKind": "safe_fix",
+          "run": "onSave",
+          "typeAware": true,
+          "unusedDisableDirectives": "deny",
+          "fmt.configPath": "./vite.config.ts"
+        }
+      }
+    },
+    "oxlint": {
+      "initialization_options": {
+        "initialization_options": {
+          "settings": {
+            "configPath": null,
+            "run": "onSave",
+            "disableNestedConfig": false,
+            "fixKind": "safe_fix",
+            "unusedDisableDirectives": "error",
+            "typeAware": true,
+            "typeCheck": true
+          }
+        }
+      }
+    },
+    // https://github.com/microsoft/typescript-go/blob/d86e4e829fee2b361c9d9f14bbf3dddb9db8a587/internal/ls/lsutil/userpreferences.go#L630
+    // https://github.com/typescript-language-server/typescript-language-server/blob/master/docs/configuration.md#preferences-options
+    "tsgo": {
+      "settings": {
+        "package_version": "7.0.1-rc",
+        "typescript": {
+          "preferences": {
+            // completions
+            "includeCompletionsForModuleExports": true,
+            "includeCompletionsForImportStatements": true,
+            "includeAutomaticOptionalChainCompletions": true,
+
+            // auto imports
+            "importModuleSpecifierPreference": "non-relative", // shortest might be nicer, but non-relative results in simpler refactors
+            "includePackageJsonAutoImports": "on",
+            "preferTypeOnlyAutoImports": true,
+
+            // rename
+            "useAliasesForRename": false,
+            "allowRenameOfImportPath": true,
+
+            // misc
+            "provideRefactorNotApplicableReason": true,
+            "disableLineTextInReferences": true, // better devex with false, but true results in WAY faster ts server
+            "reportStyleChecksAsWarnings": true,
+            "excludeLibrarySymbolsInNavTo": true,
+            "displayPartsForJSDoc": true,
+
+            // inlay hints (also enable user/inlay-hints)
+            "includeInlayParameterNameHints": "literals",
+            "includeInlayVariableTypeHints": true,
+            "includeInlayPropertyDeclarationTypeHints": true,
+            "includeInlayFunctionLikeReturnTypeHints": true,
+
+            // references code lenses
+            "referencesCodeLensEnabled": true,
+            "referencesCodeLensShowOnAllFunctions": true,
+
+            // implementations code lenses
+            "implementationsCodeLensEnabled": true,
+            "implementationsCodeLensShowOnInterfaceMethods": true,
+            "implementationsCodeLensShowOnAllClassMethods": true
+          }
+        },
+        // typescript and javascript config MUST match or tsgo goes brr
+        "javascript": {
+          "preferences": {
+            // completions
+            "includeCompletionsForModuleExports": true,
+            "includeCompletionsForImportStatements": true,
+            "includeAutomaticOptionalChainCompletions": true,
+
+            // auto imports
+            "importModuleSpecifierPreference": "non-relative", // shortest might be nicer, but non-relative results in simpler refactors
+            "includePackageJsonAutoImports": "on",
+            "preferTypeOnlyAutoImports": true,
+
+            // rename
+            "useAliasesForRename": false,
+            "allowRenameOfImportPath": true,
+
+            // misc
+            "provideRefactorNotApplicableReason": true,
+            "disableLineTextInReferences": true, // better devex with false, but true results in WAY faster ts server
+            "reportStyleChecksAsWarnings": false,
+            "excludeLibrarySymbolsInNavTo": true,
+            "displayPartsForJSDoc": true,
+
+            // inlay hints (also enable user/inlay-hints)
+            "includeInlayParameterNameHints": "literals",
+            "includeInlayVariableTypeHints": true,
+            "includeInlayPropertyDeclarationTypeHints": true,
+            "includeInlayFunctionLikeReturnTypeHints": true,
+
+            // references code lenses
+            "referencesCodeLensEnabled": true,
+            "referencesCodeLensShowOnAllFunctions": true,
+
+            // implementations code lenses
+            "implementationsCodeLensEnabled": true,
+            "implementationsCodeLensShowOnInterfaceMethods": true,
+            "implementationsCodeLensShowOnAllClassMethods": true
+          }
+        }
+      }
+    },
+    "tailwindcss-language-server": {
+      "settings": {
+        "classFunctions": ["cva"],
+        "experimental": {
+          "configFile": "packages/ui/src/styles/globals.css"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "extends": "@total-typescript/tsconfig/bundler/dom",
+  "compilerOptions": {
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "types": ["node", "vite-plus/client"],
+    "jsx": "react-jsx",
+    "erasableSyntaxOnly": true,
+    "exactOptionalPropertyTypes": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "rootDir": "./src"
+  },
+  "include": ["./src"]
+}
