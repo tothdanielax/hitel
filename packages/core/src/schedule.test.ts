@@ -53,6 +53,20 @@ describe('buildSchedule', () => {
     expect(schedule.totalPaid).toBeCloseTo(900_000);
   });
 
+  it('forgives a share of the remaining balance', () => {
+    const schedule = buildSchedule([
+      tranche({
+        annualRate: 0,
+        principal: 1_200_000,
+        termMonths: 12,
+        events: [{ month: 6, type: 'forgiveShare', share: 0.5, reason: 'second child' }]
+      })
+    ]);
+
+    expect(schedule.totalForgiven).toBe(300_000);
+    expect(schedule.monthlyTotals[6]).toBe(50_000);
+  });
+
   it('ends the loan when forgiveness covers the balance', () => {
     const schedule = buildSchedule([
       tranche({

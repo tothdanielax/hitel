@@ -1,6 +1,7 @@
 export type LoanEvent =
   | { month: number; type: 'suspend'; months: number; reason: string }
   | { month: number; type: 'forgive'; amount: number; reason: string }
+  | { month: number; type: 'forgiveShare'; share: number; reason: string }
   | { month: number; type: 'reprice'; annualRate: number; reason: string };
 
 export type Tranche = {
@@ -89,6 +90,10 @@ const simulateTranche = (tranche: Tranche): TrancheSchedule => {
         const forgiven = Math.min(balance, event.amount);
         balance -= forgiven;
         totalForgiven += forgiven;
+      }
+      if (event.type === 'forgiveShare') {
+        totalForgiven += balance * event.share;
+        balance -= balance * event.share;
       }
       if (event.type === 'reprice') rate = event.annualRate;
     }

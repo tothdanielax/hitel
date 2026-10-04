@@ -58,7 +58,8 @@ export const CSOK_PLUSZ = {
   childDeadlineYearsByPromised: [0, 4, 8, 10],
   firstChildSuspensionMonths: 12,
   forgivenessPerChild: 10_000_000,
-  forgivenessFromChildAfterApplication: 2,
+  // Child order counts all children; only births after the contract qualify.
+  forgivenessFromChildOrder: 2,
   requiresMarriage: true,
   requiresCleanRecord: true
 } as const;
@@ -76,6 +77,7 @@ export const BABAVARO = {
   minInsuredYears: 3,
   firstChildDeadlineYears: 5,
   suspensionMonthsPerChild: 36,
+  // Child order counts only children born after disbursement.
   suspendingChildren: [1, 2],
   forgivenessRateByChild: { 2: 0.3, 3: 1 },
   requiresMarriage: true,
