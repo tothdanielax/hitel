@@ -22,6 +22,9 @@ export const ISO_MONTH_LENGTH = 7;
 export const ISO_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 // Remaining balance treated as fully repaid, absorbs floating point rounding.
+// Loan amounts the planner searches are rounded to this.
+export const AMOUNT_SEARCH_STEP = 100_000;
+
 export const BALANCE_EPSILON = 0.5;
 
 export const OTTHON_START = {
@@ -154,6 +157,23 @@ export const PROGRAMS: Record<GovProgram, { name: string; legalBasis: string }> 
 };
 
 // Programs that are loans (the rest are grants or forgiveness).
+// What a loan may pay for. FREE money (a personal loan) may also be kept and invested.
+export type LoanPurpose = 'PURCHASE' | 'RENOVATION' | 'FREE';
+
+export const LOAN_PURPOSES: Partial<Record<GovProgram, readonly LoanPurpose[]>> = {
+  // Purchase or construction only, not renovation (227/2025. Korm. rendelet).
+  OTTHON_START: ['PURCHASE'],
+  // Purchase, construction, expansion; not modernization (518/2023. Korm. rendelet).
+  CSOK_PLUSZ: ['PURCHASE'],
+  // Not a housing loan, freely usable.
+  BABAVARO: ['PURCHASE', 'RENOVATION', 'FREE'],
+  // The grant's own purposes, modernization included (?).
+  FALUSI_CSOK_LOAN: ['PURCHASE', 'RENOVATION']
+};
+
+// Market housing loans finance purchase and renovation alike.
+export const BANK_LOAN_PURPOSES: readonly LoanPurpose[] = ['PURCHASE', 'RENOVATION'];
+
 export const LOAN_PROGRAMS: GovProgram[] = [
   GOV_PROGRAM.BABAVARO,
   GOV_PROGRAM.CSOK_PLUSZ,

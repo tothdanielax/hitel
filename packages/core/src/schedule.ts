@@ -48,6 +48,8 @@ type Rates = {
   inflationRate: number;
 };
 
+export const PAUSE_END_REASON = 'szüneteltetés vége, a törlesztés újraindul';
+
 export const buildSchedule = (tranches: Tranche[], rates: Rates): Schedule => {
   const chosen = tranches.map((tranche) =>
     withWorthwhileOptionalEvents(tranche, rates.discountRate)
@@ -60,12 +62,29 @@ export const buildSchedule = (tranches: Tranche[], rates: Rates): Schedule => {
   const totalPaid = sum(monthlyTotals);
   const timeline = chosen
     .flatMap((tranche) =>
-      tranche.events.map((event) => ({
-        month: event.month,
-        loan: tranche.name,
-        reason: event.reason,
-        optional: event.type === 'suspend' && event.optional
-      }))
+      tranche.events.flatMap((event) => {
+        const entry = {
+          month: event.month,
+          loan: tranche.name,
+          reason: event.reason,
+          optional: event.type === 'suspend' && event.optional
+        };
+        if (event.type !== 'suspend') return [entry];
+        const resumeMonth = event.month + event.months;
+        // A pause started before this one ends takes over the end date.
+        const extended = tranche.events.some(
+          (other) =>
+            other.type === 'suspend' && other.month > event.month && other.month <= resumeMonth
+        );
+        if (extended) return [entry];
+        const resume = {
+          month: resumeMonth,
+          loan: tranche.name,
+          reason: PAUSE_END_REASON,
+          optional: false
+        };
+        return [entry, resume];
+      })
     )
     .toSorted((a, b) => a.month - b.month);
 

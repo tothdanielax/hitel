@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { buildSchedule, type LoanEvent, type Tranche } from './schedule';
+import { buildSchedule, PAUSE_END_REASON, type LoanEvent, type Tranche } from './schedule';
 
 const RATES = { discountRate: 0.05, inflationRate: 0.025 };
 
@@ -111,7 +111,30 @@ describe('buildSchedule', () => {
       tranche({ events: [{ month: 10, type: 'suspend', months: 1, optional: false, reason: '' }] })
     );
 
-    expect(result.timeline.map((entry) => entry.month)).toEqual([10, 50]);
+    expect(result.timeline.map((entry) => entry.month)).toEqual([10, 11, 50]);
+  });
+
+  it('marks when a pause ends', () => {
+    const result = schedule(
+      flat([{ month: 2, type: 'suspend', months: 3, optional: false, reason: '' }])
+    );
+
+    expect(result.timeline.find((entry) => entry.reason === PAUSE_END_REASON)?.month).toBe(5);
+  });
+
+  it('marks only the last end of overlapping pauses', () => {
+    const result = schedule(
+      flat([
+        { month: 2, type: 'suspend', months: 3, optional: false, reason: '' },
+        { month: 4, type: 'suspend', months: 3, optional: false, reason: '' }
+      ])
+    );
+
+    expect(
+      result.timeline
+        .filter((entry) => entry.reason === PAUSE_END_REASON)
+        .map((entry) => entry.month)
+    ).toEqual([7]);
   });
 
   it('takes an optional pause when the loan is cheaper than the discount rate', () => {

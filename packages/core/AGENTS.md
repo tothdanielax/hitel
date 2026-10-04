@@ -23,6 +23,13 @@ packages/core/src/
 - All helpers (also the web app's formatters and validators) go to `utils/<topic>.ts`, named numbers and patterns go to `constants.ts`
 - Anything the user may want to override (rates, yields, offers) belongs in `settings.ts` with a default
 
+## Planner (`plan.ts`)
+
+- Candidates: every order of every legal set of subsidized loans, own funds first or last (`settings.keepOwnFunds`), and CSOK Plusz at its max or at the smallest amount that still absorbs all of its forgiveness
+- Filling: two needs (purchase, renovation), each loan only covers what `LOAN_PURPOSES` allows, mortgages share the LTV room, the bank loan comes last
+- Ranking: covers the price, then fits the JTM limit, then the lowest cost = present value of the repayments (at the bond yield) minus the cash kept
+- Only corner candidates are priced; an optimum inside (e.g. borrowing exactly up to the JTM limit) is not searched
+
 ## Using in Other Packages
 
 ```ts

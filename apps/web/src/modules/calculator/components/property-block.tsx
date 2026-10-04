@@ -27,6 +27,16 @@ export const PropertyBlock = ({ form }: Props) => {
           {(field) => <field.NumberField label='Hasznos alapterület' unit='m²' />}
         </form.AppField>
       </div>
+      <form.AppField name='renovationBudget' validators={{ onChange: inRange(INPUT_LIMITS.money) }}>
+        {(field) => (
+          <field.NumberField
+            label='Tervezett felújítás'
+            unit='Ft'
+            step={MONEY_STEP.renovation}
+            description='Otthon Start és CSOK Plusz nem fedezheti, csak önerő, Babaváró, banki lakáshitel vagy falusi CSOK'
+          />
+        )}
+      </form.AppField>
       <form.AppField name='propertyType'>
         {(field) => <field.ChoiceField label='Típus' options={PROPERTY_TYPE_OPTIONS} />}
       </form.AppField>

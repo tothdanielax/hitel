@@ -17,6 +17,7 @@ const household = (overrides: Partial<HouseholdInput>): HouseholdInput => {
     propertyType: 'APARTMENT',
     propertyCondition: 'USED',
     settlementType: 'CITY',
+    renovationBudget: 0,
     ownFunds: 10_000_000,
     netIncome: 1_000_000,
     termYears: 25,

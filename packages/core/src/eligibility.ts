@@ -34,6 +34,8 @@ export type HouseholdInput = {
   propertyType: PropertyType;
   propertyCondition: PropertyCondition;
   settlementType: SettlementType;
+  // Planned renovation on top of the price; only some loans may pay for it.
+  renovationBudget: number;
   ownFunds: number;
   netIncome: number;
   termYears: number;
@@ -58,6 +60,7 @@ export const normalizeInput = (input: HouseholdInput): HouseholdInput => {
     plannedChildrenMonths: validMonths(input.plannedChildrenMonths).filter(
       (month) => monthsBetween(input.startMonth, month) >= 0
     ),
+    renovationBudget: Math.max(0, input.renovationBudget || 0),
     termYears: Math.min(TERM_YEARS.max, Math.max(TERM_YEARS.min, input.termYears || TERM_YEARS.min))
   };
 };

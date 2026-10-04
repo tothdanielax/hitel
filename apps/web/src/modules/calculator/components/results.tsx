@@ -83,6 +83,14 @@ export const Results = ({ plan }: Props) => {
             hint='Inflációval mai forintra átszámolva, mert a későbbi törlesztők ma kevesebbet érnek'
           />
           <Stat emphasis label='Illeték' value={formatHuf(plan.stampDuty)} />
+          {plan.cashKept > 0 && (
+            <Stat
+              emphasis
+              label='Befektethető összeg'
+              value={formatHuf(plan.cashKept)}
+              hint='Megtartott önerő és a Babaváró fel nem használt része. Állampapírban vagy ETF-ben többet hoz, mint amennyibe a hitel kerül, a rangsor ezzel is számol.'
+            />
+          )}
           <Stat
             emphasis
             label='Törlesztő / jövedelem (JTM)'

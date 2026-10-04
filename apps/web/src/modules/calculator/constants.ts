@@ -29,6 +29,7 @@ export const DEFAULT_VALUES: HouseholdInput & { settings: PlanSettings } = {
   propertyType: 'APARTMENT',
   propertyCondition: 'USED',
   settlementType: 'CITY',
+  renovationBudget: 0,
   ownFunds: 10_000_000,
   netIncome: 1_200_000,
   termYears: 25,
@@ -71,6 +72,7 @@ export const INPUT_LIMITS = {
 export const MONEY_STEP = {
   price: 1_000_000,
   funds: 500_000,
+  renovation: 500_000,
   income: 50_000
 } as const;
 

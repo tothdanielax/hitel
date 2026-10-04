@@ -21,6 +21,8 @@ export type PlanSettings = {
   repriceRate: number;
   csokPluszRate: number;
   falusiCsokLoanRate: number;
+  // Borrow cheap loans first and keep own funds invested when that costs less.
+  keepOwnFunds: boolean;
   offers: OfferSetting[];
 };
 
@@ -30,6 +32,7 @@ export const DEFAULT_SETTINGS: PlanSettings = {
   repriceRate: DEFAULT_REPRICE_RATE,
   csokPluszRate: CSOK_PLUSZ.annualRate,
   falusiCsokLoanRate: FALUSI_CSOK_LOAN.annualRate,
+  keepOwnFunds: true,
   offers: BANKS.flatMap((bank) =>
     bank.offers.map((offer, index) => ({
       ...offer,

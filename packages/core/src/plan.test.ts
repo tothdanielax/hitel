@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 import type { HouseholdInput } from './eligibility';
-import { buildPlan } from './plan';
+import { buildPlan, type Plan } from './plan';
 import { DEFAULT_SETTINGS, type PlanSettings } from './settings';
 
 const SETTINGS: PlanSettings = {
@@ -29,6 +29,13 @@ const SETTINGS: PlanSettings = {
   ]
 };
 
+// Every title and detail line of the timeline.
+const texts = (result: Plan): string[] => {
+  return result.timeline.flatMap((entry) =>
+    entry.items.flatMap((item) => [item.title, ...item.details])
+  );
+};
+
 const household = (overrides: Partial<HouseholdInput>): HouseholdInput => {
   return {
     relationship: 'SINGLE',
@@ -45,6 +52,7 @@ const household = (overrides: Partial<HouseholdInput>): HouseholdInput => {
     propertyType: 'APARTMENT',
     propertyCondition: 'USED',
     settlementType: 'CITY',
+    renovationBudget: 0,
     ownFunds: 10_000_000,
     netIncome: 1_500_000,
     termYears: 25,
@@ -90,9 +98,7 @@ describe('buildPlan', () => {
   });
 
   it('reprices the bank loan when its fixation ends', () => {
-    const titles = plan({ propertyPrice: 80_000_000, propertySize: 80 }).timeline.flatMap(
-      (entry) => entry.titles
-    );
+    const titles = texts(plan({ propertyPrice: 80_000_000, propertySize: 80 }));
 
     expect(titles.some((title) => title.includes('átárazás'))).toBe(true);
   });
@@ -182,8 +188,24 @@ describe('buildPlan', () => {
     });
 
     expect(
-      result.timeline.find((entry) => entry.month === '2028-01')?.titles.length
+      result.timeline.find((entry) => entry.month === '2028-01')?.items.length
     ).toBeGreaterThan(1);
+  });
+
+  it('merges same-month events of one loan into one title', () => {
+    const items = plan({ relationship: 'MARRIED', plannedChildrenMonths: ['2027-09', '2029-09'] })
+      .timeline.flatMap((entry) => entry.items)
+      .filter((item) => item.title === 'Babaváró: 2. gyermek');
+
+    expect(items).toEqual([
+      { title: 'Babaváró: 2. gyermek', details: ['30% elengedés', 'szüneteltetés 3 évre'] }
+    ]);
+  });
+
+  it('shows when a paused loan is repaid again', () => {
+    const result = plan({ relationship: 'MARRIED', plannedChildrenMonths: ['2027-09'] });
+
+    expect(texts(result)).toContain('Babaváró: szüneteltetés vége, a törlesztés újraindul');
   });
 
   it('ignores blank and past planned-child rows', () => {
@@ -226,8 +248,74 @@ describe('buildPlan', () => {
     );
   });
 
-  it('needs no loan when own funds cover the price', () => {
-    expect(plan({ ownFunds: 60_000_000 }).loans).toEqual([]);
+  it('needs no loan when own funds cover the price and keeping them is off', () => {
+    expect(plan({ ownFunds: 60_000_000 }, { ...SETTINGS, keepOwnFunds: false }).loans).toEqual([]);
+  });
+
+  it('borrows the cheap loan and keeps own funds when bonds earn more', () => {
+    const result = plan({ ownFunds: 60_000_000 });
+
+    expect(result.cashKept).toBe(50_000_000);
+  });
+
+  it('spends own funds when bonds earn less than the loans cost', () => {
+    expect(plan({ ownFunds: 60_000_000 }, { ...SETTINGS, bondYield: 0.01 }).loans).toEqual([]);
+  });
+
+  it('keeps the unneeded part of Babaváró when borrowing pays off', () => {
+    const result = plan({ ...YOUNG_FAMILY, propertyPrice: 50_000_000, ownFunds: 40_000_000 });
+
+    expect(result.loans.find((loan) => loan.id === 'BABAVARO')?.amount).toBe(11_000_000);
+  });
+
+  it('pays renovation from own funds, never from Otthon Start', () => {
+    const result = plan(
+      { propertyPrice: 50_000_000, ownFunds: 15_000_000, renovationBudget: 10_000_000 },
+      { ...SETTINGS, keepOwnFunds: false }
+    );
+
+    expect(result.loans.map((loan) => [loan.id, loan.amount])).toEqual([
+      ['OTTHON_START', 45_000_000]
+    ]);
+  });
+
+  it('warns when the renovation cannot be financed', () => {
+    const result = plan(
+      { propertyPrice: 50_000_000, ownFunds: 5_000_000, renovationBudget: 10_000_000 },
+      { ...SETTINGS, keepOwnFunds: false }
+    );
+
+    expect(result.warnings).toContain(
+      'A hitelek és az önerő nem fedezik a vételárat és a felújítást'
+    );
+  });
+
+  it('puts the modernization part of a used home Falusi CSOK toward the renovation', () => {
+    const village: Partial<HouseholdInput> = {
+      ...YOUNG_FAMILY,
+      settlementType: 'VILLAGE',
+      propertySize: 80
+    };
+
+    expect(plan({ ...village, renovationBudget: 3_000_000 }).grant).toBeGreaterThan(
+      plan(village).grant
+    );
+  });
+
+  it('shrinks CSOK Plusz to what its forgiveness needs when a cheaper loan takes the rest', () => {
+    const settings: PlanSettings = {
+      ...SETTINGS,
+      keepOwnFunds: false,
+      offers: SETTINGS.offers.map((offer) =>
+        offer.kind === 'OTTHON_START' ? { ...offer, annualRate: 0.025 } : offer
+      )
+    };
+    const csokPlusz = plan({ ...YOUNG_FAMILY, propertyPrice: 80_000_000 }, settings).loans.find(
+      (loan) => loan.id === 'CSOK_PLUSZ'
+    );
+
+    expect(csokPlusz?.amount).toBeLessThan(30_000_000);
+    expect(csokPlusz?.totalForgiven).toBe(10_000_000);
   });
 
   it('uses the cheapest enabled Otthon Start offer', () => {
@@ -270,10 +358,9 @@ describe('buildPlan', () => {
   });
 
   it('uses the user-set reprice rate after fixation', () => {
-    const titles = plan(
-      { propertyPrice: 80_000_000, propertySize: 80 },
-      { ...SETTINGS, repriceRate: 0.09 }
-    ).timeline.flatMap((entry) => entry.titles);
+    const titles = texts(
+      plan({ propertyPrice: 80_000_000, propertySize: 80 }, { ...SETTINGS, repriceRate: 0.09 })
+    );
 
     expect(titles.some((title) => title.includes('9%'))).toBe(true);
   });

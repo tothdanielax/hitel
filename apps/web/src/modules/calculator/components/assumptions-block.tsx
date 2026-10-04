@@ -46,6 +46,14 @@ export const AssumptionsBlock = ({ form }: Props) => {
           </form.AppField>
         ))}
       </div>
+      <form.AppField name='settings.keepOwnFunds'>
+        {(field) => (
+          <field.SwitchField
+            label='Önerő befektetése'
+            description='Ha a hitel olcsóbb az állampapírhozamnál, inkább hitelt vesz fel, és az önerőt meghagyja befektetésre'
+          />
+        )}
+      </form.AppField>
     </FormBlock>
   );
 };

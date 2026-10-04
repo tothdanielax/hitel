@@ -290,6 +290,20 @@ Notes and sources:
 - Illeték: CSOK Plusz or Falusi CSOK makes the whole purchase exempt even if Otthon Start finances the rest.
 - Some sources claim a family can hold max 2 state-subsidized loans at once (?).
 
+## Purpose of the money (what each source may pay for)
+
+| Source              | Purchase / build  | Renovation / modernization           | Free use (keep, invest) |
+| ------------------- | ----------------- | ------------------------------------ | ----------------------- |
+| Otthon Start        | Y                 | N (not for renovation-only)          | N                       |
+| CSOK Plusz          | Y (+ expansion)   | N (not for modernization)            | N                       |
+| Babaváró            | Y                 | Y                                    | Y (personal loan)       |
+| Falusi CSOK grant   | Y (used: max 50%) | Y (used: the other 50%)              | N                       |
+| Falusi CSOK-kölcsön | Y                 | Y (?) (follows the grant's purposes) | N                       |
+| Market housing loan | Y                 | Y                                    | N                       |
+| Own funds           | Y                 | Y                                    | Y                       |
+
+The calculator therefore pays renovation from own funds, Babaváró, the Falusi CSOK modernization part or a bank loan, never from Otthon Start or CSOK Plusz. Only Babaváró (and own funds) may be kept and invested.
+
 ## Key numeric constants (for a calculator)
 
 Otthon Start (227/2025. Korm. rendelet; net.jogtar.hu, bankmonitor, OTP):

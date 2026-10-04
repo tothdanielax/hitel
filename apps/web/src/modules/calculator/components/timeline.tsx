@@ -41,11 +41,20 @@ export const Timeline = ({ events }: Props) => {
               <TimelineDate dateTime={event.month} className={SIDE_DATE}>
                 {formatMonth(event.month)}
               </TimelineDate>
-              {event.titles.map((title) => (
-                <TimelineTitle key={title} className='sm:-mt-0.5'>
-                  {title}
-                </TimelineTitle>
-              ))}
+              <div className='flex flex-col gap-2 sm:-mt-0.5'>
+                {event.items.map((item) => (
+                  <div key={item.title}>
+                    <TimelineTitle>{item.title}</TimelineTitle>
+                    {item.details.length > 0 && (
+                      <ul className='list-disc pl-4 text-sm'>
+                        {item.details.map((detail) => (
+                          <li key={detail}>{detail}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
               <TimelineIndicator />
             </TimelineHeader>
             <TimelineContent className='tabular-nums'>
