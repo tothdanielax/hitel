@@ -58,6 +58,7 @@ const household = (overrides: Partial<HouseholdInput>): HouseholdInput => {
     netIncome: 1_500_000,
     termYears: 25,
     startMonth: '2026-11',
+    plannedMarriageMonth: '',
     ...overrides
   };
 };
@@ -329,6 +330,40 @@ describe('buildPlan', () => {
 
   it('never plans an excluded program', () => {
     expect(loanIds({ ...YOUNG_FAMILY, excludedPrograms: ['BABAVARO'] })).not.toContain('BABAVARO');
+  });
+
+  describe('planned wedding', () => {
+    const ENGAGED: Partial<HouseholdInput> = {
+      applicantAge: 28,
+      propertyPrice: 70_000_000,
+      ownFunds: 7_000_000,
+      plannedChildrenMonths: ['2028-09', '2030-09'],
+      plannedMarriageMonth: '2027-11'
+    };
+
+    it('prepays a loan dearer than bonds with a Babaváró taken after the wedding', () => {
+      const babavaro = plan(ENGAGED).marriage?.babavaro;
+
+      expect([babavaro?.use, babavaro?.target]).toEqual(['PREPAY', 'Test Bank Fix 10']);
+    });
+
+    it('invests the later Babaváró when every loan is cheaper than bonds', () => {
+      const result = plan({ ...ENGAGED, propertyPrice: 50_000_000, ownFunds: 10_000_000 });
+
+      expect(result.marriage?.babavaro?.use).toBe('INVEST');
+    });
+
+    it('compares buying only after the wedding', () => {
+      expect(plan(ENGAGED).marriage?.buyAfter.loans).toContain('CSOK Plusz');
+    });
+
+    it('ignores the wedding for married couples', () => {
+      expect(plan({ ...ENGAGED, relationship: 'MARRIED' }).marriage).toBeUndefined();
+    });
+
+    it('has no outlook without a planned wedding', () => {
+      expect(plan({}).marriage).toBeUndefined();
+    });
   });
 
   it('keeps the unneeded part of Babaváró when borrowing pays off', () => {

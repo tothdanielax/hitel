@@ -43,6 +43,8 @@ export type HouseholdInput = {
   netIncome: number;
   termYears: number;
   startMonth: string;
+  // Unmarried couples may plan a wedding: Babaváró and CSOK Plusz need marriage. Empty when none.
+  plannedMarriageMonth: string;
 };
 
 export type Eligibility = {
@@ -64,6 +66,12 @@ export const normalizeInput = (input: HouseholdInput): HouseholdInput => {
       (month) => monthsBetween(input.startMonth, month) >= 0
     ),
     renovationBudget: Math.max(0, input.renovationBudget || 0),
+    plannedMarriageMonth:
+      input.relationship !== 'MARRIED' &&
+      ISO_MONTH.test(input.plannedMarriageMonth ?? '') &&
+      monthsBetween(input.startMonth, input.plannedMarriageMonth) > 0
+        ? input.plannedMarriageMonth
+        : '',
     excludedPrograms: (input.excludedPrograms ?? []).filter((program) =>
       EXCLUDABLE_PROGRAMS.includes(program)
     ),

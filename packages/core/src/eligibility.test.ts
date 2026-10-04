@@ -23,6 +23,7 @@ const household = (overrides: Partial<HouseholdInput>): HouseholdInput => {
     netIncome: 1_000_000,
     termYears: 25,
     startMonth: '2026-11',
+    plannedMarriageMonth: '',
     ...overrides
   };
 };

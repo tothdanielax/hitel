@@ -165,6 +165,24 @@ describe('buildSchedule', () => {
     expect(result.realTotalPaid).toBeLessThan(result.totalPaid);
   });
 
+  it('pays nothing before a deferred loan starts', () => {
+    const result = schedule(
+      tranche({ principal: 1_200_000, annualRate: 0, termMonths: 12, startMonth: 6 })
+    );
+
+    expect(result.monthlyTotals.slice(0, 7)).toEqual([0, 0, 0, 0, 0, 0, 100_000]);
+  });
+
+  it('lowers the balance on a prepayment without counting it as forgiven', () => {
+    const result = schedule(flat([{ month: 6, type: 'prepay', amount: 300_000, reason: '' }]));
+
+    expect([
+      result.monthlyTotals[6],
+      result.totalForgiven,
+      result.tranches[0]?.totalPrepaid
+    ]).toEqual([50_000, 0, 300_000]);
+  });
+
   it('returns zeros without tranches', () => {
     expect(schedule().totalPaid).toBe(0);
   });

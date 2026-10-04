@@ -199,6 +199,9 @@ export const INCOMPATIBLE_PROGRAMS: readonly (readonly [GovProgram, GovProgram])
 ];
 
 // Market rate after a bank loan's fixation ends: ECB MIR, HU new housing loans, all fixations, Aug 2026.
+// Early repayment fee: Otthon Start caps it at 1%, consumer mortgages at 1-2% (?).
+export const PREPAYMENT_FEE_RATE = 0.01;
+
 export const DEFAULT_REPRICE_RATE = 0.0715;
 
 export const MAX_COUNTED_CHILDREN = 3;

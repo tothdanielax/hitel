@@ -26,6 +26,7 @@ import { formatHuf } from '@hitel/core/utils/currency';
 import { formatPercent, sum } from '@hitel/core/utils/math';
 import { Eligibilities } from './eligibilities';
 import { LoanList } from './loan-list';
+import { MarriageOutlook } from './marriage-outlook';
 import { Stat } from './stat';
 import { Timeline } from './timeline';
 
@@ -132,6 +133,7 @@ export const Results = ({ plan }: Props) => {
             </AlertDescription>
           </Alert>
         )}
+        {plan.marriage && <MarriageOutlook outlook={plan.marriage} />}
         <Collapsible>
           <CollapsibleTrigger render={<Button variant='outline' className='group w-full' />}>
             Részletek és idővonal

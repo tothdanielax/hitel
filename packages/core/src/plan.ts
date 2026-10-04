@@ -16,6 +16,7 @@ import {
   MONTHS_PER_YEAR,
   MORTGAGE_FORGIVENESS,
   OTTHON_START,
+  PREPAYMENT_FEE_RATE,
   STAMP_DUTY,
   type GovProgram,
   type LoanPurpose
@@ -55,6 +56,14 @@ export type PlanTimelineEntry = {
   monthlyAfter: number;
 };
 
+export type MarriageOutlook = {
+  month: string;
+  // Babaváró taken after the wedding: prepays the dearest loan above the bond yield, or is invested.
+  babavaro: { amount: number; use: 'PREPAY' | 'INVEST'; target: string; gain: number } | undefined;
+  // The same purchase made only after the wedding, costs discounted to today.
+  buyAfter: { loans: string[]; averageMonthly: number; costNow: number; costAfter: number };
+};
+
 export type Plan = {
   loans: PlannedLoan[];
   grant: number;
@@ -71,6 +80,7 @@ export type Plan = {
   schedule: Schedule;
   timeline: PlanTimelineEntry[];
   eligibility: Eligibility[];
+  marriage: MarriageOutlook | undefined;
   warnings: string[];
   tips: string[];
 };
@@ -119,15 +129,131 @@ export const buildPlan = (
         )
       )
     );
-  const [best] = candidates
+  const [
+    best = evaluate(context, {
+      programs: [],
+      ownFundsFirst: input.ownFunds,
+      csokPluszCap: Infinity
+    })
+  ] = candidates
     .map((candidate) =>
       candidate.ownFundsFirst === 0 ? withinJtm(context, candidate) : evaluate(context, candidate)
     )
     .toSorted(compareEvaluations);
-  return (
-    best ??
-    evaluate(context, { programs: [], ownFundsFirst: input.ownFunds, csokPluszCap: Infinity })
-  ).plan;
+  return {
+    ...best.plan,
+    marriage: input.plannedMarriageMonth ? marriageOutlook(context, best) : undefined
+  };
+};
+
+// The household as it will be on a later month, after the wedding: older, married, earlier planned
+// children already born.
+const marriedAt = (input: HouseholdInput, month: string): HouseholdInput => {
+  const years = Math.floor(monthsBetween(input.startMonth, month) / MONTHS_PER_YEAR);
+  const born = input.plannedChildrenMonths.filter((birth) => birth < month);
+  return normalizeInput({
+    ...input,
+    relationship: 'MARRIED',
+    applicantAge: input.applicantAge + years,
+    partnerAge: input.partnerAge + years,
+    childrenBirthMonths: [...input.childrenBirthMonths, ...born],
+    plannedChildrenMonths: input.plannedChildrenMonths.filter((birth) => birth >= month),
+    startMonth: month,
+    plannedMarriageMonth: ''
+  });
+};
+
+// Existing loans cannot be refinanced into Otthon Start or CSOK Plusz (purchase only), but a
+// Babaváró taken after the wedding is free money: it can prepay a dear loan or be invested.
+const marriageOutlook = (context: Context, best: Evaluation): MarriageOutlook => {
+  const { input, settings } = context;
+  const month = input.plannedMarriageMonth;
+  const offset = monthsBetween(input.startMonth, month);
+  const rates = { discountRate: settings.bondYield, inflationRate: settings.inflationRate };
+  const discount = (1 + settings.bondYield) ** (offset / MONTHS_PER_YEAR);
+  const married = marriedAt(input, month);
+  // Waiting is not free: prices follow inflation while own funds earn the bond yield meanwhile.
+  // ponytail: rent paid while waiting is not known, so it is left out (the UI says so).
+  const after = buildPlan(
+    {
+      ...married,
+      propertyPrice:
+        input.propertyPrice * (1 + settings.inflationRate) ** (offset / MONTHS_PER_YEAR),
+      ownFunds: input.ownFunds * discount
+    },
+    settings
+  );
+  const costAfter = cost(after) / discount;
+  const babavaro = laterBabavaro(context, best, married, offset, rates, discount);
+
+  return {
+    month,
+    babavaro,
+    buyAfter: {
+      loans: after.loans.map((loan) => loan.name),
+      averageMonthly: after.schedule.averageMonthly,
+      costNow: cost(best.plan) - (babavaro?.gain ?? 0),
+      costAfter
+    }
+  };
+};
+
+const laterBabavaro = (
+  context: Context,
+  best: Evaluation,
+  married: HouseholdInput,
+  offset: number,
+  rates: { discountRate: number; inflationRate: number },
+  discount: number
+): MarriageOutlook['babavaro'] => {
+  const eligibility = checkEligibility(married).find(
+    (item) => item.program === GOV_PROGRAM.BABAVARO
+  );
+  if (!eligibility?.eligible) return undefined;
+  const amount = eligibility.maxAmount;
+  const loan = govTranche({ ...context, input: married }, GOV_PROGRAM.BABAVARO, amount);
+  const later: PlanTranche = {
+    ...loan,
+    id: `${loan.id}-later`,
+    startMonth: offset,
+    events: loan.events.map((event) => ({ ...event, month: event.month + offset }))
+  };
+  const baseCost = buildSchedule(best.tranches, rates).presentValue;
+  const investCost =
+    buildSchedule([...best.tranches, later], rates).presentValue - amount / discount;
+  const target = best.tranches
+    .filter((tranche) => tranche.annualRate > context.settings.bondYield)
+    .toSorted((a, b) => b.annualRate - a.annualRate)[0];
+  const prepayCost = (() => {
+    if (!target) return Infinity;
+    const tranches = best.tranches.map((tranche) =>
+      tranche === target
+        ? {
+            ...tranche,
+            events: [
+              ...tranche.events,
+              {
+                month: offset,
+                type: 'prepay' as const,
+                amount,
+                reason: 'Előtörlesztés Babaváróból'
+              }
+            ]
+          }
+        : tranche
+    );
+    const schedule = buildSchedule([...tranches, later], rates);
+    const prepaid = schedule.tranches[best.tranches.indexOf(target)]?.totalPrepaid ?? 0;
+    // The fee is paid in cash; Babaváró money left over after the prepayment is invested.
+    return schedule.presentValue + (prepaid * PREPAYMENT_FEE_RATE - (amount - prepaid)) / discount;
+  })();
+  const prepay = prepayCost < investCost;
+  return {
+    amount,
+    use: prepay ? 'PREPAY' : 'INVEST',
+    target: prepay ? (target?.name ?? '') : '',
+    gain: baseCost - Math.min(prepayCost, investCost)
+  };
 };
 
 const fitsJtm = ({ plan }: Evaluation): boolean => {
@@ -174,7 +300,7 @@ type Candidate = {
   csokPluszCap: number;
 };
 
-type Evaluation = { plan: Plan; shortfall: number };
+type Evaluation = { plan: Plan; shortfall: number; tranches: PlanTranche[] };
 
 const evaluate = (context: Context, candidate: Candidate): Evaluation => {
   const { input, settings } = context;
@@ -260,7 +386,9 @@ const evaluate = (context: Context, candidate: Candidate): Evaluation => {
 
   return {
     shortfall: remaining,
+    tranches,
     plan: {
+      marriage: undefined,
       ownFundsUsed: input.ownFunds - ownFunds,
       cashKept,
       investmentReturn: investmentReturn(cashKept, settings.bondYield, input.termYears),

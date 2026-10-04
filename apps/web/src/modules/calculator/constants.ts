@@ -35,6 +35,7 @@ export const DEFAULT_VALUES: HouseholdInput & { settings: PlanSettings } = {
   netIncome: 1_200_000,
   termYears: 25,
   startMonth: addMonths(BUILD_MONTH, 1),
+  plannedMarriageMonth: '',
   settings: DEFAULT_SETTINGS
 };
 

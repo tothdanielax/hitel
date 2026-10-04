@@ -28,6 +28,7 @@ packages/core/src/
 - Candidates: every order of every legal set of subsidized loans, own funds all up front or (with `settings.keepOwnFunds`) loans first with only as much own funds up front as the JTM limit needs (binary search), and CSOK Plusz at its max or at the smallest amount that still absorbs all of its forgiveness
 - Filling: two needs (purchase, renovation), each loan only covers what `LOAN_PURPOSES` allows, mortgages share the LTV room, the bank loan comes last
 - Down payment: mortgages stay within the LTV share of the price; the rest is own funds, grants and (with `settings.babavaroAsDownPayment`, bank-dependent) Babaváró. Without it the down payment is paid from own funds first, a gap is a shortfall
+- Planned wedding (`input.plannedMarriageMonth`, unmarried only): existing loans cannot be refinanced into Otthon Start or CSOK Plusz (purchase only). The outlook prices a Babaváró taken after the wedding (prepay the dearest loan above the bond yield, 1% fee, or invest) and the same purchase made after the wedding (price grows with inflation, own funds with the bond yield, rent not included)
 - `input.excludedPrograms` rules programs out (already used once, or not wanted)
 - CSOK Plusz in the plan disables jelzáloghitel-elengedés (same child cannot get both, ?)
 - Ranking: covers the price, then fits the JTM limit, then the lowest cost = present value of the repayments (at the bond yield) plus stamp duty minus the cash kept

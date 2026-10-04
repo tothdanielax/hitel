@@ -2,7 +2,7 @@ import { OTTHON_START } from '@hitel/core/constants';
 import { useStore } from '@tanstack/react-form';
 import { formatHuf } from '@hitel/core/utils/currency';
 import { formatPercent, inRange } from '@hitel/core/utils/math';
-import { EXCLUDABLE_OPTIONS, INPUT_LIMITS, RELATIONSHIP_OPTIONS } from '../constants';
+import { EXCLUDABLE_OPTIONS, INPUT_LIMITS, MONTH_RANGE, RELATIONSHIP_OPTIONS } from '../constants';
 import type { CalculatorForm } from '../hooks/use-calculator-form';
 import { FormBlock } from './form-block';
 
@@ -12,7 +12,14 @@ type Props = {
 
 export const ApplicantsBlock = ({ form }: Props) => {
   const relationship = useStore(form.store, (state) => state.values.relationship);
+  const plannedMarriage = useStore(form.store, (state) => state.values.plannedMarriageMonth);
   const isMarried = relationship === 'MARRIED';
+  // Family programs read the wife's age, so an engaged couple is asked in the same roles.
+  const [applicantLabel, partnerLabel] = isMarried
+    ? ['Feleség életkora', 'Férj életkora']
+    : plannedMarriage
+      ? ['Leendő feleség életkora', 'Leendő férj életkora']
+      : ['Életkorod', 'Társad életkora'];
 
   return (
     <FormBlock title='Igénylők' description='Családi állapot, életkor és jogviszony'>
@@ -21,21 +28,26 @@ export const ApplicantsBlock = ({ form }: Props) => {
       </form.AppField>
       <div className='flex flex-col gap-4 sm:flex-row'>
         <form.AppField name='applicantAge' validators={{ onChange: inRange(INPUT_LIMITS.age) }}>
-          {(field) => (
-            <field.NumberField label={isMarried ? 'Feleség életkora' : 'Életkorod'} unit='év' />
-          )}
+          {(field) => <field.NumberField label={applicantLabel} unit='év' />}
         </form.AppField>
-        {relationship !== 'SINGLE' && (
+        {(relationship !== 'SINGLE' || plannedMarriage) && (
           <form.AppField name='partnerAge' validators={{ onChange: inRange(INPUT_LIMITS.age) }}>
-            {(field) => (
-              <field.NumberField
-                label={isMarried ? 'Férj életkora' : 'Társad életkora'}
-                unit='év'
-              />
-            )}
+            {(field) => <field.NumberField label={partnerLabel} unit='év' />}
           </form.AppField>
         )}
       </div>
+      {!isMarried && (
+        <form.AppField name='plannedMarriageMonth'>
+          {(field) => (
+            <field.MonthField
+              label='Tervezett házasságkötés'
+              description='Ha van: a Babaváró és a CSOK Plusz házassághoz kötött'
+              range={MONTH_RANGE.planned}
+              clearable
+            />
+          )}
+        </form.AppField>
+      )}
       <form.AppField
         name='insuredYears'
         validators={{ onChange: inRange(INPUT_LIMITS.insuredYears) }}

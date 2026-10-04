@@ -38,6 +38,9 @@ export const fromSearch = (search: unknown): CalculatorValues => {
       DEFAULT_VALUES.settlementType
     ),
     startMonth: ISO_MONTH.test(merged.startMonth) ? merged.startMonth : DEFAULT_VALUES.startMonth,
+    plannedMarriageMonth: ISO_MONTH.test(merged.plannedMarriageMonth)
+      ? merged.plannedMarriageMonth
+      : '',
     childrenBirthMonths: months(merged.childrenBirthMonths),
     plannedChildrenMonths: months(merged.plannedChildrenMonths),
     excludedPrograms: merged.excludedPrograms.filter((program) =>

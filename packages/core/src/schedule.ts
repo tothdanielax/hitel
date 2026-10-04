@@ -4,7 +4,9 @@ export type LoanEvent =
   | { month: number; type: 'suspend'; months: number; optional: boolean; reason: string }
   | { month: number; type: 'forgive'; amount: number; reason: string }
   | { month: number; type: 'forgiveShare'; share: number; reason: string }
-  | { month: number; type: 'reprice'; annualRate: number; reason: string };
+  | { month: number; type: 'reprice'; annualRate: number; reason: string }
+  // Paid down from other money (e.g. a later Babaváró): lowers the balance, is neither paid nor forgiven here.
+  | { month: number; type: 'prepay'; amount: number; reason: string };
 
 export type Tranche = {
   id: string;
@@ -12,6 +14,8 @@ export type Tranche = {
   principal: number;
   annualRate: number;
   termMonths: number;
+  // Months after the plan start when the loan is disbursed (0 = at the start).
+  startMonth?: number;
   events: LoanEvent[];
 };
 
@@ -27,6 +31,7 @@ type TrancheSchedule = {
   payments: number[];
   totalPaid: number;
   totalForgiven: number;
+  totalPrepaid: number;
   initialPayment: number;
 };
 
@@ -126,15 +131,17 @@ const presentValue = (payments: number[], annualRate: number): number => {
 
 // Suspension pauses payments and extends the term by the same length; interest keeps accruing.
 const simulateTranche = (tranche: Tranche): TrancheSchedule => {
-  const payments: number[] = [];
+  const start = tranche.startMonth ?? 0;
+  const payments: number[] = Array.from({ length: start }, () => 0);
   let balance = tranche.principal;
   let rate = tranche.annualRate;
   let remaining = tranche.termMonths;
   let payment = annuity(balance, rate, remaining);
   let suspendedUntil = -1;
   let totalForgiven = 0;
+  let totalPrepaid = 0;
 
-  for (let month = 0; balance > BALANCE_EPSILON && remaining > 0; month++) {
+  for (let month = start; balance > BALANCE_EPSILON && remaining > 0; month++) {
     const events = tranche.events.filter((event) => event.month === month);
     for (const event of events) {
       if (event.type === 'suspend') suspendedUntil = month + event.months;
@@ -148,6 +155,11 @@ const simulateTranche = (tranche: Tranche): TrancheSchedule => {
         balance -= balance * event.share;
       }
       if (event.type === 'reprice') rate = event.annualRate;
+      if (event.type === 'prepay') {
+        const prepaid = Math.min(balance, event.amount);
+        balance -= prepaid;
+        totalPrepaid += prepaid;
+      }
     }
     if (events.length > 0 || month === suspendedUntil) payment = annuity(balance, rate, remaining);
 
@@ -170,7 +182,8 @@ const simulateTranche = (tranche: Tranche): TrancheSchedule => {
     payments,
     totalPaid: sum(payments),
     totalForgiven,
-    initialPayment: payments[0] ?? 0
+    totalPrepaid,
+    initialPayment: payments[start] ?? 0
   };
 };
 
