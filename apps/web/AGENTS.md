@@ -31,6 +31,7 @@ apps/web/src/
 ## Conventions
 
 - `routeTree.gen.ts` is generated, don't edit it
+- `dev` script calls the local `vp` binary: the global one loads its own Vite copy and TanStack Start returns 404 (vite-plus issue #1391)
 - Modules CANNOT import from other modules. Shared code → `src/{folder}/` or `@hitel/ui`
 - No business rules in this package, call `@hitel/core`
 - Use `@hitel/ui` for base components (e.g. `Button`, `Card`)

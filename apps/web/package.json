@@ -5,7 +5,7 @@
   "scripts": {
     "clean": "rm -rf node_modules dist .output .tanstack",
     "build": "vp build",
-    "dev": "vp dev",
+    "dev": "../../node_modules/.bin/vp dev",
     "preview": "vp preview",
     "typecheck": "tsc --noEmit"
   },

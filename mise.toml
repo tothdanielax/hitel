@@ -1,4 +1,4 @@
 [tools]
 node = "26"
-vp = "0"
+vp = "1"
 bun = "1"
