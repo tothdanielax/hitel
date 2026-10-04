@@ -30,7 +30,7 @@ export const Calculator = () => {
         </section>
         <aside
           aria-label='Eredmény'
-          className='min-w-0 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:flex-1 lg:overflow-y-auto'
+          className='min-w-0 lg:sticky lg:top-6 lg:-m-1 lg:max-h-[calc(100dvh-3rem)] lg:flex-1 lg:[scrollbar-width:none] lg:overflow-y-auto lg:p-1'
         >
           <Results plan={plan} />
         </aside>
