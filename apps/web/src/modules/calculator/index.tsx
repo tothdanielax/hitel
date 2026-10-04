@@ -7,6 +7,7 @@ import { EligibilityForm } from './components/eligibility-form';
 import { Results } from './components/results';
 import { useCalculatorForm } from './hooks/use-calculator-form';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { ShareButton } from './components/share-button';
 
 export const Calculator = () => {
   const { form, plan } = useCalculatorForm();
@@ -18,7 +19,10 @@ export const Calculator = () => {
           <Heading as='h1'>{APP_NAME}</Heading>
           <Paragraph muted>{APP_DESCRIPTION}</Paragraph>
         </div>
-        <ThemeToggle />
+        <div className='flex shrink-0 gap-2'>
+          <ShareButton />
+          <ThemeToggle />
+        </div>
       </header>
       <div className='flex flex-col gap-6 lg:flex-row lg:items-start'>
         <section aria-label='Adatok' className='min-w-0 lg:flex-1'>

@@ -33,3 +33,4 @@ apps/web/src/
 - Modules CANNOT import from other modules. Shared code → `src/{folder}/` or `@hitel/ui`
 - No business rules or helpers in this package: rules and utils (formatters, validators) live in `@hitel/core`
 - Use `@hitel/ui` for base components (e.g. `Button`, `Card`)
+- The calculator state lives in the URL (only values that differ from the defaults, see `modules/calculator/url-state.ts`). URLs are untrusted: new user editable fields must be validated in `fromSearch`, never trust anything that ends up in an `href`
