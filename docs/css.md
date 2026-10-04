@@ -2,4 +2,4 @@
 
 - We have a global stylesheet (`packages/ui/src/styles/globals.css`) with Tailwind base
 - Use `Tailwind` classes when possible
-- Dark mode follows the system (`prefers-color-scheme`): when editing `:root` update the dark `:root` block too
+- Dark mode is class based (`.dark` on `<html>`): defaults to the system, `ThemeToggle` overrides it. When editing `:root` update the `.dark` block too

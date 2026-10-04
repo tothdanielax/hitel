@@ -1,25 +1,26 @@
 import { Field, FieldDescription, FieldLabel } from '@hitel/ui/components/field';
-import { Input } from '@hitel/ui/components/input';
+import type { MonthRange } from '../constants';
 import { useFieldContext } from '../hooks/form-context';
+import { MonthPicker } from './month-picker';
 
 type Props = {
   label: string;
   description?: string;
+  range: MonthRange;
 };
 
-export const MonthField = ({ label, description }: Props) => {
+export const MonthField = ({ label, description, range }: Props) => {
   const field = useFieldContext<string>();
 
   return (
     <Field>
       <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
-      <Input
+      <MonthPicker
         id={field.name}
-        name={field.name}
-        type='month'
         value={field.state.value}
-        onBlur={field.handleBlur}
-        onChange={(event) => field.handleChange(event.target.value)}
+        from={range.from}
+        to={range.to}
+        onChange={field.handleChange}
       />
       {description && <FieldDescription>{description}</FieldDescription>}
     </Field>

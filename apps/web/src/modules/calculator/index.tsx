@@ -6,27 +6,34 @@ import { formatDate } from '@hitel/core/utils/date';
 import { EligibilityForm } from './components/eligibility-form';
 import { Results } from './components/results';
 import { useCalculatorForm } from './hooks/use-calculator-form';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export const Calculator = () => {
   const { form, plan } = useCalculatorForm();
 
   return (
     <main className='mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:px-8 md:py-10'>
-      <header className='flex flex-col gap-1'>
-        <Heading as='h1'>{APP_NAME}</Heading>
-        <Paragraph muted>{APP_DESCRIPTION}</Paragraph>
+      <header className='flex items-start justify-between gap-4'>
+        <div className='flex flex-col gap-1'>
+          <Heading as='h1'>{APP_NAME}</Heading>
+          <Paragraph muted>{APP_DESCRIPTION}</Paragraph>
+        </div>
+        <ThemeToggle />
       </header>
       <div className='flex flex-col gap-6 lg:flex-row lg:items-start'>
         <section aria-label='Adatok' className='min-w-0 lg:flex-1'>
           <EligibilityForm form={form} />
         </section>
-        <aside aria-label='Eredmény' className='min-w-0 lg:sticky lg:top-6 lg:flex-1'>
+        <aside
+          aria-label='Eredmény'
+          className='min-w-0 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:flex-1 lg:overflow-y-auto'
+        >
           <Results plan={plan} />
         </aside>
       </div>
       <footer>
         <Paragraph size='sm' muted>
-          Szabályok állapota: {formatDate(RULES_AS_OF)}. A számítás tájékoztató jellegű, nem minősül
+          Szabályok állapota: {formatDate(RULES_AS_OF)} A számítás tájékoztató jellegű, nem minősül
           ajánlatnak. A banki kamatok kézzel frissített alapértékek, a Banki ajánlatok blokkban
           átírhatók.
         </Paragraph>

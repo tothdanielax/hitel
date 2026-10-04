@@ -420,7 +420,7 @@ const tips = (settings: PlanSettings, tranches: PlanTranche[], schedule: Schedul
     .filter((entry) => entry.optional)
     .map(
       (entry) =>
-        `${entry.loan}, ${entry.reason}: kérelemre jár, és megéri kérni, mert a hitel kamata az állampapírhozam (${bondYield}) alatt van. A megspórolt törlesztőt érdemes állampapírba tenni.`
+        `${entry.loan}, ${entry.reason}: kérelemre jár, és megéri kérni, mert a hitel kamata az állampapírhozam (${bondYield}) alatt van. A megspórolt törlesztőt érdemes befektetni, például állampapírba vagy ETF-be.`
     );
   const keep = tranches
     .filter((tranche) => tranche.annualRate < settings.bondYield)

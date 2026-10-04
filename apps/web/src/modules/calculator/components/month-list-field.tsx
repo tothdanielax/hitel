@@ -1,16 +1,18 @@
 import { Button } from '@hitel/ui/components/button';
 import { Field, FieldDescription, FieldLegend, FieldSet } from '@hitel/ui/components/field';
-import { Input } from '@hitel/ui/components/input';
 import { PlusIcon, XIcon } from 'lucide-react';
+import type { MonthRange } from '../constants';
 import { useFieldContext } from '../hooks/form-context';
+import { MonthPicker } from './month-picker';
 
 type Props = {
   label: string;
   description: string;
   addLabel: string;
+  range: MonthRange;
 };
 
-export const MonthListField = ({ label, description, addLabel }: Props) => {
+export const MonthListField = ({ label, description, addLabel, range }: Props) => {
   const field = useFieldContext<string[]>();
   const months = field.state.value;
 
@@ -20,11 +22,12 @@ export const MonthListField = ({ label, description, addLabel }: Props) => {
       <FieldDescription>{description}</FieldDescription>
       {months.map((month, index) => (
         <Field key={index} orientation='horizontal'>
-          <Input
-            type='month'
+          <MonthPicker
             aria-label={`${label} ${index + 1}.`}
             value={month}
-            onChange={(event) => field.replaceValue(index, event.target.value)}
+            from={range.from}
+            to={range.to}
+            onChange={(value) => field.replaceValue(index, value)}
           />
           <Button
             type='button'

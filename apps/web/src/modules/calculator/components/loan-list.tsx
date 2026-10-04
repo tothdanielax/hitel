@@ -1,7 +1,13 @@
 import type { PlannedLoan } from '@hitel/core/plan';
 import { MONTHS_PER_YEAR } from '@hitel/core/constants';
-import { Heading } from '@hitel/ui/components/heading';
-import { Paragraph } from '@hitel/ui/components/paragraph';
+import { Marker } from '@hitel/ui/components/marker';
+import {
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FramePanel,
+  FrameTitle
+} from '@hitel/ui/components/reui/frame';
 import { formatHuf } from '@hitel/core/utils/currency';
 import { formatPercent } from '@hitel/core/utils/math';
 import { Stat } from './stat';
@@ -15,17 +21,17 @@ export const LoanList = ({ loans }: Props) => {
 
   return (
     <section className='flex flex-col gap-3'>
-      <Heading as='h3'>Hitelek</Heading>
-      <ul className='flex flex-col gap-3'>
-        {loans.map((loan) => (
-          <li key={loan.id} className='flex flex-col gap-2 rounded-lg border p-3'>
-            <div>
-              <Paragraph weight='medium'>{loan.name}</Paragraph>
-              <Paragraph size='xs' muted>
-                {loan.note}
-              </Paragraph>
-            </div>
-            <dl className='grid grid-cols-2 gap-2 sm:grid-cols-4'>
+      <Marker variant='separator' render={<h3 />}>
+        Hitelek
+      </Marker>
+      {loans.map((loan) => (
+        <Frame key={loan.id} spacing='sm'>
+          <FrameHeader>
+            <FrameTitle>{loan.name}</FrameTitle>
+            <FrameDescription>{loan.note}</FrameDescription>
+          </FrameHeader>
+          <FramePanel>
+            <dl className='grid grid-cols-2 gap-3 sm:grid-cols-3'>
               <Stat label='Összeg' value={formatHuf(loan.amount)} />
               <Stat label='Kamat' value={formatPercent(loan.annualRate)} />
               <Stat
@@ -38,9 +44,9 @@ export const LoanList = ({ loans }: Props) => {
                 <Stat label='Elengedés' value={formatHuf(loan.totalForgiven)} />
               )}
             </dl>
-          </li>
-        ))}
-      </ul>
+          </FramePanel>
+        </Frame>
+      ))}
     </section>
   );
 };

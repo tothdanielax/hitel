@@ -5,7 +5,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger
 } from '@hitel/ui/components/collapsible';
-import { Paragraph } from '@hitel/ui/components/paragraph';
+import {
+  Frame,
+  FrameDescription,
+  FrameHeader,
+  FramePanel,
+  FrameTitle
+} from '@hitel/ui/components/reui/frame';
 import { useStore } from '@tanstack/react-form';
 import { ChevronDownIcon, RotateCcwIcon } from 'lucide-react';
 import { formatDate } from '@hitel/core/utils/date';
@@ -47,14 +53,14 @@ export const BankOffersBlock = ({ form }: Props) => {
             <RotateCcwIcon />
             Alapértékek visszaállítása
           </Button>
-          <ul className='flex flex-col gap-4'>
-            {offers.map((offer, index) => (
-              <li key={offer.id} className='flex flex-col gap-3 rounded-lg border p-3'>
-                <div>
-                  <Paragraph weight='medium'>
+          {offers.map((offer, index) => (
+            <Frame key={offer.id} spacing='sm'>
+              <FrameHeader className='flex-row items-start justify-between gap-3'>
+                <div className='flex min-w-0 flex-col gap-0.5'>
+                  <FrameTitle>
                     {offer.bankName} - {offer.product}
-                  </Paragraph>
-                  <Paragraph size='xs' muted>
+                  </FrameTitle>
+                  <FrameDescription className='text-xs'>
                     {KIND_LABEL[offer.kind]}
                     {offer.thm !== undefined && `, THM ${formatPercent(offer.thm)}`}
                     {', forrás: '}
@@ -66,43 +72,34 @@ export const BankOffersBlock = ({ form }: Props) => {
                     >
                       {formatDate(offer.source.asOf)}
                     </a>
-                  </Paragraph>
+                  </FrameDescription>
                 </div>
                 <form.AppField name={`settings.offers[${index}].enabled`}>
-                  {(field) => <field.SwitchField label='Figyelembe vétel' />}
+                  {(field) => <field.CheckboxField label='Számol' />}
                 </form.AppField>
-                <div className='flex flex-col gap-4 sm:flex-row'>
-                  <form.AppField
-                    name={`settings.offers[${index}].annualRate`}
-                    validators={{ onChange: inRange(INPUT_LIMITS.rate) }}
-                  >
-                    {(field) => (
-                      <field.NumberField
-                        label='Kamat'
-                        unit='%'
-                        step={RATE_STEP}
-                        max={INPUT_LIMITS.rate.max}
-                        percent
-                      />
-                    )}
-                  </form.AppField>
-                  <form.AppField
-                    name={`settings.offers[${index}].fixationYears`}
-                    validators={{ onChange: inRange(INPUT_LIMITS.fixationYears) }}
-                  >
-                    {(field) => (
-                      <field.NumberField
-                        label='Kamatfixálás'
-                        unit='év'
-                        max={INPUT_LIMITS.fixationYears.max}
-                        description='0 = a teljes futamidőre fix'
-                      />
-                    )}
-                  </form.AppField>
-                </div>
-              </li>
-            ))}
-          </ul>
+              </FrameHeader>
+              <FramePanel className='flex flex-col gap-4 sm:flex-row'>
+                <form.AppField
+                  name={`settings.offers[${index}].annualRate`}
+                  validators={{ onChange: inRange(INPUT_LIMITS.rate) }}
+                >
+                  {(field) => <field.NumberField label='Kamat' step={RATE_STEP} percent />}
+                </form.AppField>
+                <form.AppField
+                  name={`settings.offers[${index}].fixationYears`}
+                  validators={{ onChange: inRange(INPUT_LIMITS.fixationYears) }}
+                >
+                  {(field) => (
+                    <field.NumberField
+                      label='Kamatfixálás'
+                      unit='év'
+                      description='0 = a teljes futamidőre fix'
+                    />
+                  )}
+                </form.AppField>
+              </FramePanel>
+            </Frame>
+          ))}
         </CollapsibleContent>
       </Collapsible>
     </FormBlock>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { addMonths, formatMonth, monthsBetween } from './date';
+import { addMonths, dateToMonth, formatMonth, monthToDate, monthsBetween } from './date';
 
 describe('monthsBetween', () => {
   it('counts across years', () => {
@@ -28,5 +28,15 @@ describe('addMonths', () => {
 describe('formatMonth', () => {
   it('names the month in Hungarian', () => {
     expect(formatMonth('2027-09')).toBe('2027. szeptember');
+  });
+});
+
+describe('monthToDate', () => {
+  it('round trips through dateToMonth', () => {
+    expect(dateToMonth(monthToDate('2026-12'))).toBe('2026-12');
+  });
+
+  it('lands on the 1st', () => {
+    expect(monthToDate('2026-03').getDate()).toBe(1);
   });
 });

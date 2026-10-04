@@ -41,14 +41,7 @@ export const AssumptionsBlock = ({ form }: Props) => {
             validators={{ onChange: inRange(INPUT_LIMITS.rate) }}
           >
             {(field) => (
-              <field.NumberField
-                label={label}
-                unit='%'
-                description={description}
-                step={RATE_STEP}
-                max={INPUT_LIMITS.rate.max}
-                percent
-              />
+              <field.NumberField label={label} description={description} step={RATE_STEP} percent />
             )}
           </form.AppField>
         ))}

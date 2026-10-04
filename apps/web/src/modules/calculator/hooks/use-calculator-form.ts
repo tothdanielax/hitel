@@ -2,6 +2,7 @@ import { addMonths, currentMonth } from '@hitel/core/utils/date';
 import { buildPlan } from '@hitel/core/plan';
 import { createFormHook, useStore } from '@tanstack/react-form';
 import { useEffect } from 'react';
+import { CheckboxField } from '../components/checkbox-field';
 import { ChoiceField } from '../components/choice-field';
 import { MonthField } from '../components/month-field';
 import { MonthListField } from '../components/month-list-field';
@@ -13,7 +14,14 @@ import { fieldContext, formContext } from './form-context';
 const { useAppForm } = createFormHook({
   fieldContext,
   formContext,
-  fieldComponents: { ChoiceField, MonthField, MonthListField, NumberField, SwitchField },
+  fieldComponents: {
+    CheckboxField,
+    ChoiceField,
+    MonthField,
+    MonthListField,
+    NumberField,
+    SwitchField
+  },
   formComponents: {}
 });
 

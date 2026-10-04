@@ -14,9 +14,10 @@ Shared UI component library
 
 ```bash
 packages/ui/src/
-├── components/           # UI components
+├── components/           # shadcn components
 │   ├── button.tsx
-│   └── ...
+│   ├── ...
+│   └── reui/             # ReUI registry components (badge, frame, number-field, timeline)
 └── styles/
     └── globals.css       # `Tailwind` base
 ```
@@ -32,7 +33,10 @@ packages/ui/src/
 
 1. Check if shadcn has the component you need
 2. If yes: `vp run ui:add <component>` (run from root)
-3. If no: Create in `src/components/` following existing patterns
+3. If not, check ReUI (`.claude/skills/reui`): `vp run ui:add @reui/<component>`
+4. If neither: Create in `src/components/` following existing patterns
+
+Generic controls come from shadcn; ReUI only where it adds something (rich badge variants, frame, number field, timeline). The Calendar defaults to the Hungarian locale.
 
 ### Using in Other Packages
 

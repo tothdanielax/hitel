@@ -1,8 +1,18 @@
 import type { HouseholdInput } from '@hitel/core/eligibility';
 import { addMonths } from '@hitel/core/utils/date';
 import { DEFAULT_SETTINGS, type PlanSettings } from '@hitel/core/settings';
+import { MONTHS_PER_YEAR } from '@hitel/core/constants';
 
 export const BUILD_MONTH: string = import.meta.env.VITE_BUILD_MONTH;
+
+export type MonthRange = { from: string; to: string };
+
+// Selectable months for the date pickers.
+export const MONTH_RANGE = {
+  born: { from: addMonths(BUILD_MONTH, -25 * MONTHS_PER_YEAR), to: BUILD_MONTH },
+  planned: { from: BUILD_MONTH, to: addMonths(BUILD_MONTH, 15 * MONTHS_PER_YEAR) },
+  start: { from: addMonths(BUILD_MONTH, 1), to: addMonths(BUILD_MONTH, 5 * MONTHS_PER_YEAR) }
+} as const satisfies Record<string, MonthRange>;
 
 export const DEFAULT_VALUES: HouseholdInput & { settings: PlanSettings } = {
   relationship: 'MARRIED',
@@ -64,8 +74,5 @@ export const MONEY_STEP = {
   income: 50_000
 } as const;
 
-export const RATE_STEP = 0.01;
-
-// Percent inputs show two decimals of a percentage (5.48).
-export const PERCENT_SCALE = 100;
-export const PERCENT_DECIMALS = 100;
+// One tenth of a percentage point.
+export const RATE_STEP = 0.001;

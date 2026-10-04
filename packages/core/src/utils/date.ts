@@ -27,6 +27,15 @@ export const currentMonth = (): string => {
   return new Date().toISOString().slice(0, ISO_MONTH_LENGTH);
 };
 
+// Local-time Date on the 1st, for date pickers.
+export const monthToDate = (month: string): Date => {
+  return new Date(Math.floor(toIndex(month) / MONTHS_PER_YEAR), toIndex(month) % MONTHS_PER_YEAR);
+};
+
+export const dateToMonth = (date: Date): string => {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+};
+
 const toIndex = (month: string): number => {
   const [year = 0, monthNumber = 1] = month.split('-').map(Number);
   return year * MONTHS_PER_YEAR + monthNumber - 1;

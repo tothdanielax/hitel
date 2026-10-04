@@ -1,6 +1,15 @@
 import type { PlanTimelineEntry } from '@hitel/core/plan';
-import { Heading } from '@hitel/ui/components/heading';
-import { Paragraph } from '@hitel/ui/components/paragraph';
+import { Marker } from '@hitel/ui/components/marker';
+import {
+  Timeline as TimelineRoot,
+  TimelineContent,
+  TimelineDate,
+  TimelineHeader,
+  TimelineIndicator,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineTitle
+} from '@hitel/ui/components/reui/timeline';
 import { formatHuf } from '@hitel/core/utils/currency';
 import { formatMonth } from '@hitel/core/utils/date';
 
@@ -8,31 +17,43 @@ type Props = {
   events: PlanTimelineEntry[];
 };
 
+// Wide screens put the date in a left column, narrow ones above the title.
+const SIDE_DATE =
+  'sm:group-data-[orientation=vertical]/timeline:absolute sm:group-data-[orientation=vertical]/timeline:-left-32 sm:group-data-[orientation=vertical]/timeline:w-20 sm:group-data-[orientation=vertical]/timeline:text-right';
+
 export const Timeline = ({ events }: Props) => {
   if (events.length <= 1) return null;
 
   return (
     <section className='flex flex-col gap-3'>
-      <Heading as='h3'>Idővonal</Heading>
-      <ol className='ml-2 flex flex-col gap-4 border-l pl-4'>
-        {events.map((event) => (
-          <li key={event.month}>
-            <time dateTime={event.month}>
-              <Paragraph as='span' size='xs' muted>
+      <Marker variant='separator' render={<h3 />}>
+        Idővonal
+      </Marker>
+      <TimelineRoot defaultValue={1}>
+        {events.map((event, index) => (
+          <TimelineItem
+            key={event.month}
+            step={index + 1}
+            className='sm:group-data-[orientation=vertical]/timeline:ms-32'
+          >
+            <TimelineHeader>
+              <TimelineSeparator />
+              <TimelineDate dateTime={event.month} className={SIDE_DATE}>
                 {formatMonth(event.month)}
-              </Paragraph>
-            </time>
-            {event.titles.map((title) => (
-              <Paragraph key={title} weight='medium'>
-                {title}
-              </Paragraph>
-            ))}
-            <Paragraph size='sm' numeric>
+              </TimelineDate>
+              {event.titles.map((title) => (
+                <TimelineTitle key={title} className='sm:-mt-0.5'>
+                  {title}
+                </TimelineTitle>
+              ))}
+              <TimelineIndicator />
+            </TimelineHeader>
+            <TimelineContent className='tabular-nums'>
               Havi törlesztő: {formatHuf(event.monthlyAfter)}
-            </Paragraph>
-          </li>
+            </TimelineContent>
+          </TimelineItem>
         ))}
-      </ol>
+      </TimelineRoot>
     </section>
   );
 };

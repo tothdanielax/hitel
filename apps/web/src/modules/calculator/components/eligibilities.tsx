@@ -1,8 +1,15 @@
 import type { Eligibility } from '@hitel/core/eligibility';
 import { PROGRAMS } from '@hitel/core/constants';
-import { Badge } from '@hitel/ui/components/badge';
-import { Heading } from '@hitel/ui/components/heading';
-import { Paragraph } from '@hitel/ui/components/paragraph';
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle
+} from '@hitel/ui/components/item';
+import { Marker } from '@hitel/ui/components/marker';
+import { Badge } from '@hitel/ui/components/reui/badge';
 import { formatHuf } from '@hitel/core/utils/currency';
 
 type Props = {
@@ -12,35 +19,31 @@ type Props = {
 export const Eligibilities = ({ eligibility }: Props) => {
   return (
     <section className='flex flex-col gap-3'>
-      <Heading as='h3'>Állami támogatások</Heading>
-      <ul className='flex flex-col gap-3'>
+      <Marker variant='separator' render={<h3 />}>
+        Állami támogatások
+      </Marker>
+      <ItemGroup>
         {eligibility.map((item) => (
-          <li key={item.program} className='flex flex-col gap-1'>
-            <div className='flex flex-wrap items-center gap-2'>
-              <Paragraph as='span' weight='medium'>
-                {PROGRAMS[item.program].name}
-              </Paragraph>
-              <Badge variant={item.eligible ? 'default' : 'outline'}>
+          <Item key={item.program} variant='outline' size='sm'>
+            <ItemContent>
+              <ItemTitle>{PROGRAMS[item.program].name}</ItemTitle>
+              <ItemDescription>{PROGRAMS[item.program].legalBasis}</ItemDescription>
+              {item.reasons.length > 0 && (
+                <ul className='text-muted-foreground list-disc pl-4 text-sm'>
+                  {item.reasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              )}
+            </ItemContent>
+            <ItemActions className='self-start'>
+              <Badge variant={item.eligible ? 'success-light' : 'outline'} radius='full'>
                 {item.eligible ? `max. ${formatHuf(item.maxAmount)}` : 'Nem jár'}
               </Badge>
-            </div>
-            <Paragraph size='xs' muted>
-              {PROGRAMS[item.program].legalBasis}
-            </Paragraph>
-            {item.reasons.length > 0 && (
-              <ul className='list-disc pl-5'>
-                {item.reasons.map((reason) => (
-                  <li key={reason}>
-                    <Paragraph size='sm' muted>
-                      {reason}
-                    </Paragraph>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
+            </ItemActions>
+          </Item>
         ))}
-      </ul>
+      </ItemGroup>
     </section>
   );
 };

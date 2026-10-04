@@ -1,5 +1,5 @@
 import { TERM_YEARS } from '@hitel/core/constants';
-import { INPUT_LIMITS, MONEY_STEP } from '../constants';
+import { INPUT_LIMITS, MONEY_STEP, MONTH_RANGE } from '../constants';
 import type { CalculatorForm } from '../hooks/use-calculator-form';
 import { inRange } from '@hitel/core/utils/math';
 import { FormBlock } from './form-block';
@@ -27,17 +27,10 @@ export const FinancesBlock = ({ form }: Props) => {
       </div>
       <div className='flex flex-col gap-4 sm:flex-row'>
         <form.AppField name='termYears' validators={{ onChange: inRange(TERM_YEARS) }}>
-          {(field) => (
-            <field.NumberField
-              label='Futamidő'
-              unit='év'
-              min={TERM_YEARS.min}
-              max={TERM_YEARS.max}
-            />
-          )}
+          {(field) => <field.NumberField label='Futamidő' unit='év' />}
         </form.AppField>
         <form.AppField name='startMonth'>
-          {(field) => <field.MonthField label='Tervezett folyósítás' />}
+          {(field) => <field.MonthField label='Tervezett folyósítás' range={MONTH_RANGE.start} />}
         </form.AppField>
       </div>
     </FormBlock>

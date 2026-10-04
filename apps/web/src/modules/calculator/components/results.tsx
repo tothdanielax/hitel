@@ -1,6 +1,6 @@
 import type { Plan } from '@hitel/core/plan';
 import { Alert, AlertDescription, AlertTitle } from '@hitel/ui/components/alert';
-import { Badge } from '@hitel/ui/components/badge';
+import { Badge } from '@hitel/ui/components/reui/badge';
 import { Button } from '@hitel/ui/components/button';
 import {
   Card,
@@ -14,9 +14,16 @@ import {
   CollapsibleContent,
   CollapsibleTrigger
 } from '@hitel/ui/components/collapsible';
-import { ChevronDownIcon, LightbulbIcon } from 'lucide-react';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle
+} from '@hitel/ui/components/empty';
+import { ChevronDownIcon, LightbulbIcon, PiggyBankIcon } from 'lucide-react';
 import { formatHuf } from '@hitel/core/utils/currency';
-import { formatPercent } from '@hitel/core/utils/math';
+import { formatPercent, sum } from '@hitel/core/utils/math';
 import { Eligibilities } from './eligibilities';
 import { LoanList } from './loan-list';
 import { Stat } from './stat';
@@ -32,16 +39,37 @@ export const Results = ({ plan }: Props) => {
       <CardHeader>
         <CardTitle>Legjobb kombináció</CardTitle>
         <CardDescription className='flex flex-wrap gap-1'>
-          {plan.loans.length === 0 && 'Nincs szükség hitelre'}
           {plan.loans.map((loan) => (
-            <Badge key={loan.id} variant='secondary'>
+            <Badge key={loan.id} variant='secondary' radius='full'>
               {loan.name}
             </Badge>
           ))}
         </CardDescription>
       </CardHeader>
       <CardContent className='flex flex-col gap-4'>
+        {plan.loans.length === 0 && (
+          <Empty className='border'>
+            <EmptyHeader>
+              <EmptyMedia variant='icon'>
+                <PiggyBankIcon />
+              </EmptyMedia>
+              <EmptyTitle>Nincs szükség hitelre</EmptyTitle>
+              <EmptyDescription>Az önerő és a támogatások fedezik a vételárat.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
         <dl className='grid grid-cols-1 gap-4 min-[380px]:grid-cols-2'>
+          <Stat
+            emphasis
+            label='Szükséges hitelösszeg'
+            value={formatHuf(sum(plan.loans.map((loan) => loan.amount)))}
+          />
+          <Stat emphasis label='Állami támogatás' value={formatHuf(plan.subsidy)} />
+          <Stat
+            emphasis
+            label='Induló havi törlesztő'
+            value={formatHuf(plan.schedule.initialMonthly)}
+          />
           <Stat
             emphasis
             label='Átlagos havi törlesztő'
@@ -50,15 +78,10 @@ export const Results = ({ plan }: Props) => {
           <Stat emphasis label='Teljes visszafizetés' value={formatHuf(plan.schedule.totalPaid)} />
           <Stat
             emphasis
-            label='Visszafizetés mai értéken'
+            label='Visszafizetés mai pénzben'
             value={formatHuf(plan.schedule.realTotalPaid)}
+            hint='Inflációval mai forintra átszámolva, mert a későbbi törlesztők ma kevesebbet érnek'
           />
-          <Stat
-            emphasis
-            label='Induló havi törlesztő'
-            value={formatHuf(plan.schedule.initialMonthly)}
-          />
-          <Stat emphasis label='Állami támogatás' value={formatHuf(plan.subsidy)} />
           <Stat emphasis label='Illeték' value={formatHuf(plan.stampDuty)} />
           <Stat
             emphasis

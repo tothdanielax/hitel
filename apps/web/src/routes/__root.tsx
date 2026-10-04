@@ -1,16 +1,18 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
+import { TooltipProvider } from '@hitel/ui/components/tooltip';
 import globalsCss from '@hitel/ui/globals.css?url';
-import { APP_NAME, APP_DESCRIPTION } from '@/constants';
+import { APP_NAME, APP_DESCRIPTION, THEME_SCRIPT } from '@/constants';
 
 const RootDocument = ({ children }: { children: ReactNode }) => {
   return (
-    <html lang='hu'>
+    <html lang='hu' suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
-        {children}
+        <TooltipProvider>{children}</TooltipProvider>
         <Scripts />
       </body>
     </html>
