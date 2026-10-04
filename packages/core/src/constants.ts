@@ -12,11 +12,18 @@ export const GOV_PROGRAM = {
 } as const;
 export type GovProgram = keyof typeof GOV_PROGRAM;
 
-const PROPERTY_TYPE = {
-  APARTMENT: 'APARTMENT',
-  HOUSE: 'HOUSE'
-} as const;
-export type PropertyType = keyof typeof PROPERTY_TYPE;
+export type PropertyType = 'APARTMENT' | 'HOUSE';
+
+export const MONTHS_PER_YEAR = 12;
+export const PERCENT = 100;
+export const MILLION = 1_000_000;
+
+// ISO month ('YYYY-MM') as produced by <input type="month">.
+export const ISO_MONTH_LENGTH = 7;
+export const ISO_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+// Remaining balance treated as fully repaid, absorbs floating point rounding.
+export const BALANCE_EPSILON = 0.5;
 
 export const OTTHON_START = {
   name: 'Otthon Start',
@@ -79,7 +86,8 @@ export const BABAVARO = {
   suspensionMonthsPerChild: 36,
   // Child order counts only children born after disbursement.
   suspendingChildren: [1, 2],
-  forgivenessRateByChild: { 2: 0.3, 3: 1 },
+  // Share of the remaining debt forgiven, indexed by child order.
+  forgivenessRateByChild: [0, 0, 0.3, 1],
   requiresMarriage: true,
   requiresCleanRecord: true
 } as const;
@@ -88,7 +96,6 @@ export const FALUSI_CSOK = {
   name: 'Falusi CSOK',
   legalBasis: '302/2023. (VII. 11.) Korm. rendelet',
   grantByChildren: [0, 1_000_000, 4_000_000, 15_000_000],
-  modernizationOnlyGrantByChildren: [0, 600_000, 2_000_000, 7_500_000],
   usedPurchaseMaxShareForPrice: 0.5,
   wifeAgeBelow: 41,
   minInsuredYears: 2,
@@ -111,13 +118,15 @@ export const FALUSI_CSOK_LOAN = {
 export const MORTGAGE_FORGIVENESS = {
   name: 'Jelzáloghitel-elengedés',
   legalBasis: '337/2017. (XI. 14.) Korm. rendelet',
-  amountByChildOrder: { 2: 1_000_000, 3: 4_000_000 },
+  // Indexed by child order (all children count); later children get amountForFurtherChild.
+  amountByChildOrder: [0, 0, 1_000_000, 4_000_000],
   amountForFurtherChild: 1_000_000
 } as const;
 
 export const MNB_LIMITS = {
   legalBasis: '32/2014. (IX. 10.) MNB rendelet',
   incomeThreshold: 800_000,
+  fixationYears: { medium: 5, long: 10 },
   // [below threshold, at or above threshold]
   paymentToIncomeByFixation: {
     UNDER_5_YEARS: [0.25, 0.3],
@@ -136,6 +145,23 @@ export const STAMP_DUTY = {
   exemptWith: [GOV_PROGRAM.CSOK_PLUSZ, GOV_PROGRAM.FALUSI_CSOK]
 } as const;
 
+export const PROGRAMS: Record<GovProgram, { name: string; legalBasis: string }> = {
+  OTTHON_START,
+  CSOK_PLUSZ,
+  BABAVARO,
+  FALUSI_CSOK,
+  FALUSI_CSOK_LOAN,
+  MORTGAGE_FORGIVENESS
+};
+
+// Programs that are loans (the rest are grants or forgiveness).
+export const LOAN_PROGRAMS: GovProgram[] = [
+  GOV_PROGRAM.BABAVARO,
+  GOV_PROGRAM.CSOK_PLUSZ,
+  GOV_PROGRAM.OTTHON_START,
+  GOV_PROGRAM.FALUSI_CSOK_LOAN
+];
+
 // Pairs that cannot be used together. Unclear pairs from docs/gov-loans.md are treated as not allowed.
 export const INCOMPATIBLE_PROGRAMS: readonly (readonly [GovProgram, GovProgram])[] = [
   [GOV_PROGRAM.CSOK_PLUSZ, GOV_PROGRAM.FALUSI_CSOK_LOAN],
@@ -143,7 +169,7 @@ export const INCOMPATIBLE_PROGRAMS: readonly (readonly [GovProgram, GovProgram])
 ];
 
 // Market rate after a bank loan's fixation ends: ECB MIR, HU new housing loans, all fixations, Aug 2026.
-export const MARKET_REPRICE_RATE = 0.0715;
+export const DEFAULT_REPRICE_RATE = 0.0715;
 
 export const MAX_COUNTED_CHILDREN = 3;
 

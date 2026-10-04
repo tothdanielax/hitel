@@ -1,12 +1,22 @@
+import { ISO_MONTH_LENGTH, MONTHS_PER_YEAR } from './constants';
+
 // ISO months ('YYYY-MM') keep dates timezone free.
 export const monthsBetween = (from: string, to: string): number => {
-  const [fromYear = 0, fromMonth = 0] = from.split('-').map(Number);
-  const [toYear = 0, toMonth = 0] = to.split('-').map(Number);
-  return (toYear - fromYear) * 12 + (toMonth - fromMonth);
+  return toIndex(to) - toIndex(from);
 };
 
 export const addMonths = (month: string, count: number): string => {
-  const [year = 0, monthIndex = 1] = month.split('-').map(Number);
-  const total = year * 12 + (monthIndex - 1) + count;
-  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`;
+  const total = toIndex(month) + count;
+  const year = Math.floor(total / MONTHS_PER_YEAR);
+  const monthNumber = (total % MONTHS_PER_YEAR) + 1;
+  return `${year}-${String(monthNumber).padStart(2, '0')}`;
+};
+
+export const currentMonth = (): string => {
+  return new Date().toISOString().slice(0, ISO_MONTH_LENGTH);
+};
+
+const toIndex = (month: string): number => {
+  const [year = 0, monthNumber = 1] = month.split('-').map(Number);
+  return year * MONTHS_PER_YEAR + monthNumber - 1;
 };

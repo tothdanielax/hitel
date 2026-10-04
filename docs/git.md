@@ -14,8 +14,7 @@
 
 ## Branches
 
-- Use `<type>/<ticket>/<short-description>` in kebab-case (e.g. `feature/no-ref/calculator`, `fix/12/jtm-limit`)
-- Use `no-ref` when there is no ticket
+- Use `<type>/<short-description>` in kebab-case (e.g. `feature/calculator`, `fix/jtm-limit`)
 
 ## Pull Requests
 

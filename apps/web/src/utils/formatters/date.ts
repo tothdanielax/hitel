@@ -1,9 +1,10 @@
 const MONTH = new Intl.DateTimeFormat('hu-HU', { year: 'numeric', month: 'long', timeZone: 'UTC' });
+const DAY = new Intl.DateTimeFormat('hu-HU', { dateStyle: 'medium', timeZone: 'UTC' });
 
 export const formatMonth = (isoMonth: string): string => {
   return MONTH.format(new Date(`${isoMonth}-01T00:00:00Z`));
 };
 
-export const currentMonth = (): string => {
-  return new Date().toISOString().slice(0, 7);
+export const formatDate = (isoDate: string): string => {
+  return DAY.format(new Date(`${isoDate}T00:00:00Z`));
 };

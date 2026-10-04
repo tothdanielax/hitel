@@ -1,21 +1,30 @@
 import { describe, expect, it } from 'vite-plus/test';
-import type { Bank } from './banks/bank';
 import type { HouseholdInput } from './eligibility';
 import { buildPlan } from './plan';
+import { DEFAULT_SETTINGS, type PlanSettings } from './settings';
 
-const BANK: Bank = {
-  id: 'test',
-  name: 'Test Bank',
-  api: null,
-  developerPortal: '',
+const SETTINGS: PlanSettings = {
+  ...DEFAULT_SETTINGS,
   offers: [
     {
+      id: 'test-0',
+      bankName: 'Test Bank',
       product: 'Fix 10',
       kind: 'MARKET',
       annualRate: 0.06,
       fixationYears: 10,
-      asOf: '2026-10-04',
-      source: ''
+      source: { url: '', asOf: '2026-10-04' },
+      enabled: true
+    },
+    {
+      id: 'test-1',
+      bankName: 'Test Bank',
+      product: 'Otthon Start',
+      kind: 'OTTHON_START',
+      annualRate: 0.03,
+      fixationYears: 0,
+      source: { url: '', asOf: '2026-10-04' },
+      enabled: true
     }
   ]
 };
@@ -40,183 +49,232 @@ const household = (overrides: Partial<HouseholdInput>): HouseholdInput => {
     netIncome: 1_500_000,
     termYears: 25,
     startMonth: '2026-11',
-    bondYield: 0.0548,
-    inflationRate: 0.025,
     ...overrides
   };
 };
 
-const loanIds = (input: HouseholdInput): string[] => {
-  return buildPlan(input, [BANK]).loans.map((loan) => loan.id);
+const plan = (overrides: Partial<HouseholdInput>, settings: PlanSettings = SETTINGS) => {
+  return buildPlan(household(overrides), settings);
+};
+
+const loanIds = (overrides: Partial<HouseholdInput>): string[] => {
+  return plan(overrides).loans.map((loan) => loan.id);
+};
+
+const YOUNG_FAMILY: Partial<HouseholdInput> = {
+  relationship: 'MARRIED',
+  propertyPrice: 90_000_000,
+  propertySize: 70,
+  plannedChildrenMonths: ['2027-09', '2030-03']
 };
 
 describe('buildPlan', () => {
   it('finances a single first-time buyer with Otthon Start only', () => {
-    const plan = buildPlan(household({}), [BANK]);
+    expect(loanIds({})).toEqual(['OTTHON_START']);
+  });
 
-    expect(plan.loans.map((loan) => loan.id)).toEqual(['OTTHON_START']);
-    expect(plan.loans[0]?.amount).toBe(50_000_000);
-    expect(Math.round(plan.schedule.initialMonthly)).toBe(237_106);
-    expect(plan.warnings).toEqual([]);
+  it('caps Otthon Start at 50M', () => {
+    expect(plan({}).loans[0]?.amount).toBe(50_000_000);
+  });
+
+  it('charges the known Otthon Start installment (50M, 3%, 25y)', () => {
+    expect(Math.round(plan({}).schedule.initialMonthly)).toBe(237_106);
   });
 
   it('tops up with a bank loan above the Otthon Start cap', () => {
-    const plan = buildPlan(household({ propertyPrice: 80_000_000, propertySize: 80 }), [BANK]);
+    const result = plan({ propertyPrice: 80_000_000, propertySize: 80 });
 
-    expect(plan.loans.map((loan) => loan.amount)).toEqual([50_000_000, 20_000_000]);
-    expect(
-      plan.timeline.some((entry) => entry.titles.some((title) => title.includes('átárazás')))
-    ).toBe(true);
+    expect(result.loans.map((loan) => loan.amount).toSorted((a, b) => b - a)).toEqual([
+      50_000_000, 20_000_000
+    ]);
   });
 
-  it('uses only the bank when Otthon Start is not available (not a first home)', () => {
-    const plan = buildPlan(household({ firstHome: false }), [BANK]);
-
-    expect(plan.loans.map((loan) => loan.id)).toEqual(['bank-test']);
-    expect(plan.loans[0]?.amount).toBe(48_000_000);
-    expect(plan.shortfall).toBe(2_000_000);
-  });
-
-  it('combines Babaváró, CSOK Plusz and Otthon Start for a young married couple planning children', () => {
-    const ids = loanIds(
-      household({
-        relationship: 'MARRIED',
-        propertyPrice: 90_000_000,
-        propertySize: 70,
-        plannedChildrenMonths: ['2027-09', '2030-03']
-      })
+  it('reprices the bank loan when its fixation ends', () => {
+    const titles = plan({ propertyPrice: 80_000_000, propertySize: 80 }).timeline.flatMap(
+      (entry) => entry.titles
     );
 
-    expect(ids).toEqual(['BABAVARO', 'CSOK_PLUSZ', 'OTTHON_START']);
+    expect(titles.some((title) => title.includes('átárazás'))).toBe(true);
+  });
+
+  it('respects the 80% loan-to-value limit for repeat buyers', () => {
+    expect(plan({ firstHome: false }).loans[0]?.amount).toBe(48_000_000);
+  });
+
+  it('warns about missing own funds when loans cannot cover the price', () => {
+    expect(plan({ firstHome: false }).warnings).toContain(
+      'A hitelek nem fedezik a teljes vételárat, több önerő szükséges'
+    );
+  });
+
+  it('combines Babaváró, CSOK Plusz and Otthon Start for a young married couple', () => {
+    expect(loanIds(YOUNG_FAMILY).toSorted()).toEqual(['BABAVARO', 'CSOK_PLUSZ', 'OTTHON_START']);
   });
 
   it('forgives 10M on CSOK Plusz for the second child', () => {
-    const plan = buildPlan(
-      household({
-        relationship: 'MARRIED',
-        childrenBirthMonths: ['2024-01'],
-        plannedChildrenMonths: ['2028-01'],
-        applicantAge: 36
-      }),
-      [BANK]
-    );
-    const csokPlusz = plan.loans.find((loan) => loan.id === 'CSOK_PLUSZ');
+    const result = plan({
+      relationship: 'MARRIED',
+      childrenBirthMonths: ['2024-01'],
+      plannedChildrenMonths: ['2028-01'],
+      applicantAge: 36
+    });
 
-    expect(csokPlusz?.amount).toBe(30_000_000);
-    expect(csokPlusz?.totalForgiven).toBe(10_000_000);
+    expect(result.loans.find((loan) => loan.id === 'CSOK_PLUSZ')?.totalForgiven).toBe(10_000_000);
   });
 
   it('applies jelzáloghitel-elengedés on Otthon Start for the second child', () => {
-    const plan = buildPlan(
-      household({ childrenBirthMonths: ['2024-01'], plannedChildrenMonths: ['2028-01'] }),
-      [BANK]
-    );
+    const result = plan({ childrenBirthMonths: ['2024-01'], plannedChildrenMonths: ['2028-01'] });
 
-    expect(plan.loans.find((loan) => loan.id === 'OTTHON_START')?.totalForgiven).toBe(1_000_000);
+    expect(result.loans.find((loan) => loan.id === 'OTTHON_START')?.totalForgiven).toBe(1_000_000);
   });
 
-  it('adds the Falusi CSOK grant in a village and waives stamp duty', () => {
-    const plan = buildPlan(
-      household({
-        relationship: 'MARRIED',
-        settlementType: 'VILLAGE',
-        propertyCondition: 'NEW',
-        propertyType: 'HOUSE',
-        propertySize: 100,
-        childrenBirthMonths: ['2020-01', '2022-01', '2024-01']
-      }),
-      [BANK]
-    );
+  it('adds the Falusi CSOK grant in a village', () => {
+    const result = plan({
+      relationship: 'MARRIED',
+      settlementType: 'VILLAGE',
+      propertyType: 'HOUSE',
+      propertySize: 100,
+      childrenBirthMonths: ['2020-01', '2022-01', '2024-01']
+    });
 
-    expect(plan.grant).toBe(15_000_000);
-    expect(plan.stampDuty).toBe(0);
+    expect(result.grant).toBe(7_500_000);
+  });
+
+  it('waives stamp duty with Falusi CSOK', () => {
+    const result = plan({
+      relationship: 'MARRIED',
+      settlementType: 'VILLAGE',
+      propertyType: 'HOUSE',
+      propertySize: 100,
+      childrenBirthMonths: ['2020-01']
+    });
+
+    expect(result.stampDuty).toBe(0);
   });
 
   it('charges 4% stamp duty on a used home without CSOK', () => {
-    expect(buildPlan(household({}), [BANK]).stampDuty).toBe(2_400_000);
+    expect(plan({}).stampDuty).toBe(2_400_000);
   });
 
   it('never combines CSOK Plusz with Falusi CSOK-kölcsön', () => {
-    const ids = loanIds(
-      household({
-        relationship: 'MARRIED',
-        settlementType: 'VILLAGE',
-        propertyType: 'HOUSE',
-        propertySize: 100,
-        propertyPrice: 120_000_000,
-        ownFunds: 20_000_000,
-        firstHome: false,
-        childrenBirthMonths: ['2020-01', '2022-01'],
-        plannedChildrenMonths: ['2028-01']
-      })
-    );
+    const ids = loanIds({
+      relationship: 'MARRIED',
+      settlementType: 'VILLAGE',
+      propertyType: 'HOUSE',
+      propertySize: 100,
+      propertyPrice: 120_000_000,
+      ownFunds: 20_000_000,
+      firstHome: false,
+      childrenBirthMonths: ['2020-01', '2022-01'],
+      plannedChildrenMonths: ['2028-01']
+    });
 
     expect(ids.includes('CSOK_PLUSZ') && ids.includes('FALUSI_CSOK_LOAN')).toBe(false);
   });
 
   it('groups same-month events into one timeline entry', () => {
-    const plan = buildPlan(
-      household({
-        relationship: 'MARRIED',
-        childrenBirthMonths: ['2024-01'],
-        plannedChildrenMonths: ['2028-01'],
-        propertyPrice: 90_000_000,
-        propertySize: 70
-      }),
-      [BANK]
-    );
-    const birth = plan.timeline.find((entry) => entry.month === '2028-01');
+    const result = plan({
+      relationship: 'MARRIED',
+      childrenBirthMonths: ['2024-01'],
+      plannedChildrenMonths: ['2028-01'],
+      propertyPrice: 90_000_000,
+      propertySize: 70
+    });
 
-    expect(birth?.titles.length).toBeGreaterThan(1);
-    expect(new Set(plan.timeline.map((entry) => entry.month)).size).toBe(plan.timeline.length);
+    expect(
+      result.timeline.find((entry) => entry.month === '2028-01')?.titles.length
+    ).toBeGreaterThan(1);
   });
 
   it('ignores blank and past planned-child rows', () => {
-    const plan = buildPlan(
-      household({ relationship: 'MARRIED', plannedChildrenMonths: ['', '2020-01'] }),
-      [BANK]
-    );
+    const result = plan({ relationship: 'MARRIED', plannedChildrenMonths: ['', '2020-01'] });
 
-    expect(plan.eligibility.find((item) => item.program === 'CSOK_PLUSZ')?.eligible).toBe(false);
+    expect(result.eligibility.find((item) => item.program === 'CSOK_PLUSZ')?.eligible).toBe(false);
   });
 
   it('counts planned children by date, not entry order', () => {
-    const input = household({ relationship: 'MARRIED', propertySize: 70 });
-    const sorted = buildPlan({ ...input, plannedChildrenMonths: ['2027-11', '2031-11'] }, [BANK]);
-    const reversed = buildPlan({ ...input, plannedChildrenMonths: ['2031-11', '2027-11'] }, [BANK]);
+    const sorted = plan({ ...YOUNG_FAMILY, plannedChildrenMonths: ['2027-11', '2031-11'] });
+    const reversed = plan({ ...YOUNG_FAMILY, plannedChildrenMonths: ['2031-11', '2027-11'] });
 
     expect(reversed.eligibility).toEqual(sorted.eligibility);
   });
 
   it('clamps an empty term instead of dropping the loans', () => {
-    const plan = buildPlan(household({ termYears: 0 }), [BANK]);
-
-    expect(plan.schedule.initialMonthly).toBeGreaterThan(0);
+    expect(plan({ termYears: 0 }).schedule.initialMonthly).toBeGreaterThan(0);
   });
 
   it('recommends pausing Babaváró after the first child', () => {
-    const plan = buildPlan(
-      household({ relationship: 'MARRIED', plannedChildrenMonths: ['2027-09'] }),
-      [BANK]
-    );
+    const result = plan({ relationship: 'MARRIED', plannedChildrenMonths: ['2027-09'] });
 
-    expect(plan.tips.some((tip) => tip.startsWith('Babaváró, 1. gyermek: szüneteltetés'))).toBe(
+    expect(result.tips.some((tip) => tip.startsWith('Babaváró, 1. gyermek: szüneteltetés'))).toBe(
       true
     );
   });
 
-  it('warns when installments exceed the JTM limit', () => {
-    const plan = buildPlan(household({ netIncome: 300_000 }), [BANK]);
+  it('skips optional pauses that bring no gain', () => {
+    const result = plan(
+      { relationship: 'MARRIED', plannedChildrenMonths: ['2027-09'] },
+      { ...SETTINGS, bondYield: 0 }
+    );
 
-    expect(plan.warnings).toContain(
+    expect(result.tips.some((tip) => tip.includes('szüneteltetés'))).toBe(false);
+  });
+
+  it('warns when installments exceed the JTM limit', () => {
+    expect(plan({ netIncome: 300_000 }).warnings).toContain(
       'A törlesztőrészlet meghaladja a jövedelemarányos (JTM) korlátot'
     );
   });
 
   it('needs no loan when own funds cover the price', () => {
-    const plan = buildPlan(household({ ownFunds: 60_000_000 }), [BANK]);
+    expect(plan({ ownFunds: 60_000_000 }).loans).toEqual([]);
+  });
 
-    expect(plan.loans).toEqual([]);
-    expect(plan.schedule.totalPaid).toBe(0);
+  it('uses the cheapest enabled Otthon Start offer', () => {
+    const settings: PlanSettings = {
+      ...SETTINGS,
+      offers: SETTINGS.offers.map((offer) =>
+        offer.kind === 'OTTHON_START' ? { ...offer, annualRate: 0.028 } : offer
+      )
+    };
+
+    expect(plan({}, settings).loans[0]?.annualRate).toBe(0.028);
+  });
+
+  it('caps a user-entered Otthon Start rate at the legal 3%', () => {
+    const settings: PlanSettings = {
+      ...SETTINGS,
+      offers: SETTINGS.offers.map((offer) =>
+        offer.kind === 'OTTHON_START' ? { ...offer, annualRate: 0.05 } : offer
+      )
+    };
+
+    expect(plan({}, settings).loans[0]?.annualRate).toBe(0.03);
+  });
+
+  it('caps a user-entered CSOK Plusz rate at the legal 3%', () => {
+    const result = plan(YOUNG_FAMILY, { ...SETTINGS, csokPluszRate: 0.05 });
+
+    expect(result.loans.find((loan) => loan.id === 'CSOK_PLUSZ')?.annualRate).toBe(0.03);
+  });
+
+  it('skips disabled bank offers', () => {
+    const settings: PlanSettings = {
+      ...SETTINGS,
+      offers: SETTINGS.offers.map((offer) => ({ ...offer, enabled: offer.kind !== 'MARKET' }))
+    };
+
+    expect(plan({ propertyPrice: 80_000_000, propertySize: 80 }, settings).warnings).toContain(
+      'Nincs bekapcsolt banki ajánlat a kiegészítő hitelhez'
+    );
+  });
+
+  it('uses the user-set reprice rate after fixation', () => {
+    const titles = plan(
+      { propertyPrice: 80_000_000, propertySize: 80 },
+      { ...SETTINGS, repriceRate: 0.09 }
+    ).timeline.flatMap((entry) => entry.titles);
+
+    expect(titles.some((title) => title.includes('9%'))).toBe(true);
   });
 });

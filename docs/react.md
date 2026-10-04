@@ -23,7 +23,7 @@
 - Use `React` v19 features (`useContext` -> `use`, `forwardRef` -> `ref`), don't use `memo`, `useMemo`, `useCallback`
 - `React` internal order: 1. `useState` → 2. `useRef` → 3. hooks → 4. `useEffect` -> 5. other
 - Use the simplest state management possible (`useState` -> `useContext` -> `useReducer`)
-- Use `Heading` and `Paragraph` components from `@hitel/ui/components/typography` for typography instead of custom styles
+- Use `Heading` (`@hitel/ui/components/heading`) and `Paragraph` (`@hitel/ui/components/paragraph`) for text instead of custom styles
 - Don't use `use client` or server components
 - Don't export `Props` if not used elsewhere
 - Don't use `useEffect` if not necessary

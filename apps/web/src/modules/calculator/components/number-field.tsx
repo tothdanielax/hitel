@@ -1,5 +1,7 @@
 import { Field, FieldDescription, FieldError, FieldLabel } from '@hitel/ui/components/field';
 import { Input } from '@hitel/ui/components/input';
+import { Paragraph } from '@hitel/ui/components/paragraph';
+import { PERCENT_DECIMALS, PERCENT_SCALE } from '../constants';
 import { useFieldContext } from '../hooks/form-context';
 
 type Props = {
@@ -23,24 +25,28 @@ export const NumberField = ({
   percent = false
 }: Props) => {
   const field = useFieldContext<number>();
-  const scale = percent ? PERCENT_SCALE : 1;
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+  const scale = percent ? PERCENT_SCALE : 1;
 
   return (
     <Field data-invalid={isInvalid}>
       <FieldLabel htmlFor={field.name}>
         {label}
-        {unit && <span className='text-muted-foreground font-normal'>({unit})</span>}
+        {unit && (
+          <Paragraph as='span' size='sm' muted>
+            ({unit})
+          </Paragraph>
+        )}
       </FieldLabel>
       <Input
         id={field.name}
         name={field.name}
         type='number'
-        inputMode='numeric'
+        inputMode='decimal'
         min={min * scale}
         max={max === undefined ? undefined : max * scale}
-        step={step}
-        value={Math.round(field.state.value * scale * PRECISION) / PRECISION}
+        step={percent ? step * scale : step}
+        value={Math.round(field.state.value * scale * PERCENT_DECIMALS) / PERCENT_DECIMALS}
         aria-invalid={isInvalid}
         onBlur={field.handleBlur}
         onChange={(event) => field.handleChange((event.target.valueAsNumber || 0) / scale)}
@@ -50,6 +56,3 @@ export const NumberField = ({
     </Field>
   );
 };
-
-const PERCENT_SCALE = 100;
-const PRECISION = 100;

@@ -14,12 +14,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger
 } from '@hitel/ui/components/collapsible';
-import { Paragraph } from '@hitel/ui/components/typography';
 import { ChevronDownIcon, LightbulbIcon } from 'lucide-react';
-import { formatHuf } from '@/utils/currency';
-import { formatPercent } from '@/utils/percent';
+import { formatHuf } from '@/utils/formatters/currency';
+import { formatPercent } from '@/utils/formatters/percent';
 import { Eligibilities } from './eligibilities';
 import { LoanList } from './loan-list';
+import { Stat } from './stat';
 import { Timeline } from './timeline';
 
 type Props = {
@@ -42,13 +42,26 @@ export const Results = ({ plan }: Props) => {
       </CardHeader>
       <CardContent className='flex flex-col gap-4'>
         <dl className='grid grid-cols-1 gap-4 min-[380px]:grid-cols-2'>
-          <Stat label='Átlagos havi törlesztő' value={formatHuf(plan.schedule.averageMonthly)} />
-          <Stat label='Teljes visszafizetés' value={formatHuf(plan.schedule.totalPaid)} />
-          <Stat label='Visszafizetés mai értéken' value={formatHuf(plan.schedule.realTotalPaid)} />
-          <Stat label='Induló havi törlesztő' value={formatHuf(plan.schedule.initialMonthly)} />
-          <Stat label='Állami támogatás' value={formatHuf(plan.subsidy)} />
-          <Stat label='Illeték' value={formatHuf(plan.stampDuty)} />
           <Stat
+            emphasis
+            label='Átlagos havi törlesztő'
+            value={formatHuf(plan.schedule.averageMonthly)}
+          />
+          <Stat emphasis label='Teljes visszafizetés' value={formatHuf(plan.schedule.totalPaid)} />
+          <Stat
+            emphasis
+            label='Visszafizetés mai értéken'
+            value={formatHuf(plan.schedule.realTotalPaid)}
+          />
+          <Stat
+            emphasis
+            label='Induló havi törlesztő'
+            value={formatHuf(plan.schedule.initialMonthly)}
+          />
+          <Stat emphasis label='Állami támogatás' value={formatHuf(plan.subsidy)} />
+          <Stat emphasis label='Illeték' value={formatHuf(plan.stampDuty)} />
+          <Stat
+            emphasis
             label='Törlesztő / jövedelem (JTM)'
             value={`${formatPercent(plan.paymentToIncome)} / ${formatPercent(plan.paymentToIncomeLimit)}`}
           />
@@ -84,18 +97,5 @@ export const Results = ({ plan }: Props) => {
         </Collapsible>
       </CardContent>
     </Card>
-  );
-};
-
-const Stat = ({ label, value }: { label: string; value: string }) => {
-  return (
-    <div className='flex flex-col gap-1'>
-      <dt>
-        <Paragraph size='sm' muted>
-          {label}
-        </Paragraph>
-      </dt>
-      <dd className='text-xl font-semibold tabular-nums sm:text-2xl'>{value}</dd>
-    </div>
   );
 };

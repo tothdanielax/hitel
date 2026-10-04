@@ -23,7 +23,7 @@ apps/web/src/
 │       └── utils/             # Module-only utilities
 ├── components/                # Shared cross-module components
 ├── hooks/                     # Shared hooks
-├── utils/                     # Shared utilities
+├── utils/                     # Shared utilities (`formatters/` for currency, date, percent)
 ├── constants.ts               # App (UI) constants, business constants live in @hitel/core
 └── router.tsx                 # Router factory
 ```

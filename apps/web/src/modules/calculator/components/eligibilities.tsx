@@ -1,8 +1,9 @@
 import type { Eligibility } from '@hitel/core/eligibility';
+import { PROGRAMS } from '@hitel/core/constants';
 import { Badge } from '@hitel/ui/components/badge';
-import { Heading } from '@hitel/ui/components/typography';
-import { formatHuf } from '@/utils/currency';
-import { PROGRAM_NAMES } from '../constants';
+import { Heading } from '@hitel/ui/components/heading';
+import { Paragraph } from '@hitel/ui/components/paragraph';
+import { formatHuf } from '@/utils/formatters/currency';
 
 type Props = {
   eligibility: Eligibility[];
@@ -16,15 +17,24 @@ export const Eligibilities = ({ eligibility }: Props) => {
         {eligibility.map((item) => (
           <li key={item.program} className='flex flex-col gap-1'>
             <div className='flex flex-wrap items-center gap-2'>
-              <span className='font-medium'>{PROGRAM_NAMES[item.program]}</span>
+              <Paragraph as='span' weight='medium'>
+                {PROGRAMS[item.program].name}
+              </Paragraph>
               <Badge variant={item.eligible ? 'default' : 'outline'}>
                 {item.eligible ? `max. ${formatHuf(item.maxAmount)}` : 'Nem jár'}
               </Badge>
             </div>
+            <Paragraph size='xs' muted>
+              {PROGRAMS[item.program].legalBasis}
+            </Paragraph>
             {item.reasons.length > 0 && (
-              <ul className='text-muted-foreground list-disc pl-5 text-sm'>
+              <ul className='list-disc pl-5'>
                 {item.reasons.map((reason) => (
-                  <li key={reason}>{reason}</li>
+                  <li key={reason}>
+                    <Paragraph size='sm' muted>
+                      {reason}
+                    </Paragraph>
+                  </li>
                 ))}
               </ul>
             )}

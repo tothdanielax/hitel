@@ -1,4 +1,5 @@
-import { subsets } from './utils';
+import { BALANCE_EPSILON, MONTHS_PER_YEAR } from './constants';
+import { subsets, sum } from './utils/math';
 export type LoanEvent =
   | { month: number; type: 'suspend'; months: number; optional: boolean; reason: string }
   | { month: number; type: 'forgive'; amount: number; reason: string }
@@ -22,7 +23,7 @@ type TimelineEntry = {
 };
 
 type TrancheSchedule = {
-  id: string;
+  name: string;
   payments: number[];
   totalPaid: number;
   totalForgiven: number;
@@ -45,13 +46,6 @@ type Rates = {
   // Opportunity cost of money: what savings earn instead of repaying (e.g. government bonds).
   discountRate: number;
   inflationRate: number;
-};
-
-const annuity = (principal: number, annualRate: number, months: number): number => {
-  if (months <= 0) return principal;
-  if (annualRate === 0) return principal / months;
-  const rate = annualRate / 12;
-  return (principal * rate) / (1 - (1 + rate) ** -months);
 };
 
 export const buildSchedule = (tranches: Tranche[], rates: Rates): Schedule => {
@@ -105,7 +99,8 @@ const withWorthwhileOptionalEvents = (tranche: Tranche, discountRate: number): T
 
 const presentValue = (payments: number[], annualRate: number): number => {
   return payments.reduce(
-    (total, payment, month) => total + payment / (1 + annualRate) ** ((month + 1) / 12),
+    (total, payment, month) =>
+      total + payment / (1 + annualRate) ** ((month + 1) / MONTHS_PER_YEAR),
     0
   );
 };
@@ -138,13 +133,13 @@ const simulateTranche = (tranche: Tranche): TrancheSchedule => {
     if (events.length > 0 || month === suspendedUntil) payment = annuity(balance, rate, remaining);
 
     if (month < suspendedUntil) {
-      balance += (balance * rate) / 12;
+      balance += (balance * rate) / MONTHS_PER_YEAR;
       payments.push(0);
       continue;
     }
     if (balance <= BALANCE_EPSILON) break;
 
-    const interest = (balance * rate) / 12;
+    const interest = (balance * rate) / MONTHS_PER_YEAR;
     const due = Math.min(payment, balance + interest);
     balance = balance + interest - due;
     remaining--;
@@ -152,7 +147,7 @@ const simulateTranche = (tranche: Tranche): TrancheSchedule => {
   }
 
   return {
-    id: tranche.id,
+    name: tranche.name,
     payments,
     totalPaid: sum(payments),
     totalForgiven,
@@ -160,8 +155,9 @@ const simulateTranche = (tranche: Tranche): TrancheSchedule => {
   };
 };
 
-const BALANCE_EPSILON = 0.5;
-
-const sum = (values: number[]): number => {
-  return values.reduce((total, value) => total + value, 0);
+const annuity = (principal: number, annualRate: number, months: number): number => {
+  if (months <= 0) return principal;
+  if (annualRate === 0) return principal / months;
+  const rate = annualRate / MONTHS_PER_YEAR;
+  return (principal * rate) / (1 - (1 + rate) ** -months);
 };

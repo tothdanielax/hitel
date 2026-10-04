@@ -21,8 +21,6 @@ const household = (overrides: Partial<HouseholdInput>): HouseholdInput => {
     netIncome: 1_000_000,
     termYears: 25,
     startMonth: '2026-11',
-    bondYield: 0.0548,
-    inflationRate: 0.025,
     ...overrides
   };
 };

@@ -1,7 +1,8 @@
-import { Heading, Paragraph } from '@hitel/ui/components/typography';
+import { Heading } from '@hitel/ui/components/heading';
+import { Paragraph } from '@hitel/ui/components/paragraph';
 import { RULES_AS_OF } from '@hitel/core/constants';
 import { APP_DESCRIPTION, APP_NAME } from '@/constants';
-import { formatMonth } from '@/utils/date';
+import { formatDate } from '@/utils/formatters/date';
 import { EligibilityForm } from './components/eligibility-form';
 import { Results } from './components/results';
 import { useCalculatorForm } from './hooks/use-calculator-form';
@@ -25,8 +26,9 @@ export const Calculator = () => {
       </div>
       <footer>
         <Paragraph size='sm' muted>
-          Szabályok állapota: {formatMonth(RULES_AS_OF.slice(0, 7))}. A számítás tájékoztató
-          jellegű, nem minősül ajánlatnak. A banki kamatok kézzel frissített adatok.
+          Szabályok állapota: {formatDate(RULES_AS_OF)}. A számítás tájékoztató jellegű, nem minősül
+          ajánlatnak. A banki kamatok kézzel frissített alapértékek, a Banki ajánlatok blokkban
+          átírhatók.
         </Paragraph>
       </footer>
     </main>

@@ -4,7 +4,9 @@ import {
   FALUSI_CSOK,
   FALUSI_CSOK_LOAN,
   GOV_PROGRAM,
+  ISO_MONTH,
   MAX_COUNTED_CHILDREN,
+  MONTHS_PER_YEAR,
   OTTHON_START,
   type GovProgram,
   TERM_YEARS,
@@ -36,8 +38,6 @@ export type HouseholdInput = {
   netIncome: number;
   termYears: number;
   startMonth: string;
-  bondYield: number;
-  inflationRate: number;
 };
 
 export type Eligibility = {
@@ -77,7 +77,7 @@ const countedChildren = (input: HouseholdInput, deadlineYearsByPromised: readonl
   const existing = input.childrenBirthMonths.length;
   const promised = input.plannedChildrenMonths.filter((month, index) => {
     const deadlineYears = deadlineYearsByPromised[Math.min(index + 1, MAX_COUNTED_CHILDREN)] ?? 0;
-    return monthsBetween(input.startMonth, month) <= deadlineYears * 12;
+    return monthsBetween(input.startMonth, month) <= deadlineYears * MONTHS_PER_YEAR;
   }).length;
   return { existing, promised, total: Math.min(existing + promised, MAX_COUNTED_CHILDREN) };
 };
@@ -138,7 +138,8 @@ const babavaro = (input: HouseholdInput): Eligibility => {
   const hasChildInTime =
     input.pregnant ||
     input.plannedChildrenMonths.some(
-      (month) => monthsBetween(input.startMonth, month) <= BABAVARO.firstChildDeadlineYears * 12
+      (month) =>
+        monthsBetween(input.startMonth, month) <= BABAVARO.firstChildDeadlineYears * MONTHS_PER_YEAR
     );
   const reasons = [
     ...common(input, BABAVARO),
@@ -201,8 +202,6 @@ const common = (
     )
   ];
 };
-
-const ISO_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 const when = (condition: boolean, reason: string): string[] => {
   return condition ? [reason] : [];
