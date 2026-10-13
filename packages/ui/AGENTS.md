@@ -25,6 +25,8 @@ packages/ui/src/
 ## Quick Reference
 
 - Add component: `src/components/<name>.tsx`
+- `IconButton` (in `button.tsx`) is the icon only button, its tooltip doubles as the accessible name
+- `Tooltip` falls back to a tap-to-open popover on touch devices (no hover), so tooltips work on mobile
 - Modify styles: `src/styles/globals.css`
 
 ## Conventions

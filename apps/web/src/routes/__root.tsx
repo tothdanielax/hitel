@@ -25,11 +25,17 @@ export const Route = createRootRoute({
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { title: APP_NAME },
-      { name: 'description', content: APP_DESCRIPTION }
+      { name: 'description', content: APP_DESCRIPTION },
+      { name: 'theme-color', media: '(prefers-color-scheme: light)', content: '#ffffff' },
+      { name: 'theme-color', media: '(prefers-color-scheme: dark)', content: '#0a0a0a' },
+      { property: 'og:title', content: APP_NAME },
+      { property: 'og:description', content: APP_DESCRIPTION },
+      { property: 'og:type', content: 'website' }
     ],
     links: [
       { rel: 'stylesheet', href: globalsCss },
-      { rel: 'icon', type: 'image/svg+xml', href: `${import.meta.env.BASE_URL}favicon.svg` }
+      { rel: 'icon', type: 'image/svg+xml', href: `${import.meta.env.BASE_URL}favicon.svg` },
+      { rel: 'apple-touch-icon', href: `${import.meta.env.BASE_URL}apple-touch-icon.png` }
     ]
   }),
   shellComponent: RootDocument,

@@ -17,7 +17,6 @@ export const MONTH_RANGE = {
 export const DEFAULT_VALUES: HouseholdInput & { settings: PlanSettings } = {
   relationship: 'MARRIED',
   applicantAge: 30,
-  partnerAge: 32,
   insuredYears: 5,
   firstHome: true,
   cleanRecord: true,
@@ -31,6 +30,8 @@ export const DEFAULT_VALUES: HouseholdInput & { settings: PlanSettings } = {
   propertyCondition: 'USED',
   settlementType: 'CITY',
   renovationBudget: 0,
+  energyEfficient: false,
+  soldHomeValue: 0,
   ownFunds: 10_000_000,
   netIncome: 1_200_000,
   termYears: 25,
@@ -51,7 +52,7 @@ export const PROPERTY_TYPE_OPTIONS = {
 } as const satisfies Record<HouseholdInput['propertyType'], string>;
 
 export const PROPERTY_CONDITION_OPTIONS = {
-  NEW: 'Új építésű',
+  NEW: 'Új, vállalkozótól',
   USED: 'Használt'
 } as const satisfies Record<HouseholdInput['propertyCondition'], string>;
 
@@ -87,6 +88,9 @@ export const MONEY_STEP = {
   renovation: 500_000,
   income: 50_000
 } as const;
+
+// Anchor of the results panel, the mobile result bar links to it.
+export const RESULTS_ID = 'eredmeny';
 
 // One tenth of a percentage point.
 export const RATE_STEP = 0.001;

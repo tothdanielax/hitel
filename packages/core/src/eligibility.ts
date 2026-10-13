@@ -23,7 +23,6 @@ export type HouseholdInput = {
   relationship: Relationship;
   // For married couples this is the wife's age, the age limits of family programs apply to her.
   applicantAge: number;
-  partnerAge: number;
   insuredYears: number;
   firstHome: boolean;
   cleanRecord: boolean;
@@ -39,6 +38,10 @@ export type HouseholdInput = {
   settlementType: SettlementType;
   // Planned renovation on top of the price; only some loans may pay for it.
   renovationBudget: number;
+  // Energy class A+: green loan limits (90% LTV, 60% JTM).
+  energyEfficient: boolean;
+  // Value of the home sold around the purchase (lakáscsere), 0 when none.
+  soldHomeValue: number;
   ownFunds: number;
   netIncome: number;
   termYears: number;
@@ -65,7 +68,14 @@ export const normalizeInput = (input: HouseholdInput): HouseholdInput => {
     plannedChildrenMonths: validMonths(input.plannedChildrenMonths).filter(
       (month) => monthsBetween(input.startMonth, month) >= 0
     ),
+    // Shared links are untrusted: amounts can be negative or not numbers at all.
+    propertyPrice: Math.max(0, input.propertyPrice || 0),
+    propertySize: Math.max(0, input.propertySize || 0),
+    ownFunds: Math.max(0, input.ownFunds || 0),
+    netIncome: Math.max(0, input.netIncome || 0),
     renovationBudget: Math.max(0, input.renovationBudget || 0),
+    soldHomeValue: Math.max(0, input.soldHomeValue || 0),
+    energyEfficient: input.energyEfficient === true,
     plannedMarriageMonth:
       input.relationship !== 'MARRIED' &&
       ISO_MONTH.test(input.plannedMarriageMonth ?? '') &&
@@ -100,13 +110,16 @@ const excluded = (eligibility: Eligibility): Eligibility => {
   };
 };
 
-// Promised children only count if born before the program's deadline.
+// The deadline belongs to the number of promised children (2 children: both within 8 years), so the
+// most children whose last birth still fits its deadline count.
 const countedChildren = (input: HouseholdInput, deadlineYearsByPromised: readonly number[]) => {
   const existing = input.childrenBirthMonths.length;
-  const promised = input.plannedChildrenMonths.filter((month, index) => {
+  const promised = input.plannedChildrenMonths.reduce((counted, month, index) => {
     const deadlineYears = deadlineYearsByPromised[Math.min(index + 1, MAX_COUNTED_CHILDREN)] ?? 0;
-    return monthsBetween(input.startMonth, month) <= deadlineYears * MONTHS_PER_YEAR;
-  }).length;
+    return monthsBetween(input.startMonth, month) <= deadlineYears * MONTHS_PER_YEAR
+      ? index + 1
+      : counted;
+  }, 0);
   return { existing, promised, total: Math.min(existing + promised, MAX_COUNTED_CHILDREN) };
 };
 
@@ -153,6 +166,11 @@ const csokPlusz = (input: HouseholdInput): Eligibility => {
       input.propertyPrice > valueCaps[input.propertyType],
       'Az ingatlan értéke meghaladja a felső határt'
     ),
+    // 6. § (8) b): a couple that owns (or sold) a home must buy a more valuable one.
+    ...when(
+      !input.firstHome && input.propertyPrice <= input.soldHomeValue,
+      'Az új lakásnak drágábbnak kell lennie a meglévőnél'
+    ),
     ...when(input.propertySize < minArea, `Legalább ${minArea} m² hasznos alapterület szükséges`)
   ];
   return result(
@@ -163,28 +181,18 @@ const csokPlusz = (input: HouseholdInput): Eligibility => {
 };
 
 const babavaro = (input: HouseholdInput): Eligibility => {
-  const hasChildInTime =
-    input.pregnant ||
-    input.plannedChildrenMonths.some(
-      (month) =>
-        monthsBetween(input.startMonth, month) <= BABAVARO.firstChildDeadlineYears * MONTHS_PER_YEAR
-    );
   const reasons = [
     ...common(input, BABAVARO),
     ...when(
       input.applicantAge < BABAVARO.wifeMinAge || input.applicantAge >= BABAVARO.wifeAgeBelow,
       `A feleség ${BABAVARO.wifeMinAge} és ${BABAVARO.wifeAgeBelow} év közötti legyen`
-    ),
-    ...when(
-      !hasChildInTime,
-      `Gyermek nélkül ${BABAVARO.firstChildDeadlineYears} év után kamatozóvá válik`
     )
   ];
   return result(GOV_PROGRAM.BABAVARO, reasons, BABAVARO.maxAmount);
 };
 
 const falusiCsok = (input: HouseholdInput): Eligibility => {
-  const children = countedChildren(input, CSOK_PLUSZ.childDeadlineYearsByPromised);
+  const children = falusiCsokChildren(input);
   const minArea = FALUSI_CSOK.minFloorAreaByChildren[input.propertyType][children.total] ?? 0;
   const grant = FALUSI_CSOK.grantByChildren[children.total] ?? 0;
   const reasons = [
@@ -204,14 +212,27 @@ const falusiCsok = (input: HouseholdInput): Eligibility => {
 };
 
 const falusiCsokLoan = (input: HouseholdInput): Eligibility => {
-  const children = countedChildren(input, CSOK_PLUSZ.childDeadlineYearsByPromised);
+  const children = falusiCsokChildren(input);
   const maxAmount = FALUSI_CSOK_LOAN.maxAmountByChildren[children.total] ?? 0;
+  // The loan comes with the grant, so the grant's conditions apply too.
   const reasons = [
-    ...common(input, FALUSI_CSOK_LOAN),
-    ...when(input.settlementType !== 'VILLAGE', 'Csak kedvezményezett kistelepülésen igényelhető'),
-    ...when(maxAmount === 0, 'Legalább két meglévő vagy vállalt gyermek szükséges')
+    ...new Set([
+      ...common(input, FALUSI_CSOK_LOAN),
+      ...falusiCsok(input).reasons,
+      ...when(maxAmount === 0, 'Legalább két meglévő vagy vállalt gyermek szükséges')
+    ])
   ];
   return result(GOV_PROGRAM.FALUSI_CSOK_LOAN, reasons, maxAmount);
+};
+
+// 302/2023. 11. §: only a married couple may promise children, partners and single parents count
+// the children they already have. Deadlines follow the CSOK Plusz pattern (20. § (3)).
+export const falusiCsokChildren = (input: HouseholdInput) => {
+  if (input.relationship === 'MARRIED') {
+    return countedChildren(input, CSOK_PLUSZ.childDeadlineYearsByPromised);
+  }
+  const existing = input.childrenBirthMonths.length;
+  return { existing, promised: 0, total: Math.min(existing, MAX_COUNTED_CHILDREN) };
 };
 
 const common = (

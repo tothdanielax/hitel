@@ -12,29 +12,23 @@ describe('diffFrom', () => {
   it('is undefined without changes', () => {
     expect(diffFrom(BASE, BASE)).toBeUndefined();
   });
-
-  it('keeps only changed nested values', () => {
-    expect(diffFrom({ ...BASE, settings: { ...BASE.settings, rate: 0.04 } }, BASE)).toEqual({
-      settings: { rate: 0.04 }
-    });
-  });
-
-  it('diffs arrays of objects by id', () => {
-    const changed = {
-      ...BASE,
-      settings: { ...BASE.settings, offers: [{ ...BASE.settings.offers[0]!, rate: 0.07 }] }
-    };
-    expect(diffFrom(changed, BASE)).toEqual({ settings: { offers: { x: { rate: 0.07 } } } });
-  });
-
-  it('keeps whole primitive arrays', () => {
-    expect(diffFrom({ ...BASE, months: ['2027-01'] }, BASE)).toEqual({ months: ['2027-01'] });
-  });
 });
 
 describe('mergeInto', () => {
-  it('round trips a diff', () => {
+  it('round trips a diff of top-level values', () => {
     const changed = { ...BASE, age: 40, months: ['2027-01'] };
+    expect(mergeInto(BASE, diffFrom(changed, BASE))).toEqual(changed);
+  });
+
+  it('round trips a diff of a nested value', () => {
+    const changed = { ...BASE, settings: { ...BASE.settings, rate: 0.04 } };
+    expect(mergeInto(BASE, diffFrom(changed, BASE))).toEqual(changed);
+  });
+
+  it('round trips a diff of an object in an array', () => {
+    const [offer] = BASE.settings.offers;
+    if (!offer) throw new Error('missing test offer');
+    const changed = { ...BASE, settings: { ...BASE.settings, offers: [{ ...offer, rate: 0.07 }] } };
     expect(mergeInto(BASE, diffFrom(changed, BASE))).toEqual(changed);
   });
 

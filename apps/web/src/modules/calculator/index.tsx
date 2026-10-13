@@ -4,16 +4,19 @@ import { RULES_AS_OF } from '@hitel/core/constants';
 import { APP_DESCRIPTION, APP_NAME } from '@/constants';
 import { formatDate } from '@hitel/core/utils/date';
 import { EligibilityForm } from './components/eligibility-form';
+import { ResultBar } from './components/result-bar';
 import { Results } from './components/results';
 import { useCalculatorForm } from './hooks/use-calculator-form';
+import { GithubLink } from '@/components/github-link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ShareButton } from './components/share-button';
+import { RESULTS_ID } from './constants';
 
 export const Calculator = () => {
   const { form, plan } = useCalculatorForm();
 
   return (
-    <main className='mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:px-8 md:py-10'>
+    <main className='mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-6 pb-20 md:px-8 md:pt-10 lg:pb-10'>
       {/* Narrow screens put the buttons on their own first row. */}
       <header className='flex flex-col-reverse gap-4 sm:flex-row sm:items-start sm:justify-between'>
         <div className='flex flex-col gap-1'>
@@ -23,6 +26,7 @@ export const Calculator = () => {
         <div className='flex shrink-0 justify-end gap-2'>
           <ShareButton />
           <ThemeToggle />
+          <GithubLink />
         </div>
       </header>
       <div className='flex flex-col gap-6 lg:flex-row lg:items-start'>
@@ -30,6 +34,7 @@ export const Calculator = () => {
           <EligibilityForm form={form} />
         </section>
         <aside
+          id={RESULTS_ID}
           aria-label='Eredmény'
           className='min-w-0 lg:sticky lg:top-6 lg:-m-1 lg:max-h-[calc(100dvh-3rem)] lg:flex-1 lg:[scrollbar-width:none] lg:overflow-y-auto lg:p-1'
         >
@@ -45,6 +50,7 @@ export const Calculator = () => {
           alapértékek, a Banki ajánlatok blokkban átírhatók.
         </Paragraph>
       </footer>
+      <ResultBar plan={plan} />
     </main>
   );
 };

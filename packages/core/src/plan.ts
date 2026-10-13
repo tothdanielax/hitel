@@ -14,6 +14,7 @@ import {
   MAX_COUNTED_CHILDREN,
   MNB_LIMITS,
   MONTHS_PER_YEAR,
+  MNB_BASE_RATE,
   MORTGAGE_FORGIVENESS,
   OTTHON_START,
   PREPAYMENT_FEE_RATE,
@@ -23,6 +24,7 @@ import {
 } from './constants';
 import {
   checkEligibility,
+  falusiCsokChildren,
   normalizeInput,
   type Eligibility,
   type HouseholdInput
@@ -31,7 +33,7 @@ import { buildSchedule, type LoanEvent, type Schedule, type Tranche } from './sc
 import { DEFAULT_SETTINGS, type OfferSetting, type PlanSettings } from './settings';
 import { formatHuf, formatMillions } from './utils/currency';
 import { addMonths, monthsBetween } from './utils/date';
-import { arrangements, clamp, formatPercent } from './utils/math';
+import { arrangements, clamp, formatPercent, sum } from './utils/math';
 
 export type PlannedLoan = {
   id: string;
@@ -45,7 +47,7 @@ export type PlannedLoan = {
   note: string;
 };
 
-export type PlanTimelineItem = {
+type PlanTimelineItem = {
   title: string;
   details: string[];
 };
@@ -109,8 +111,10 @@ export const buildPlan = (
     purchaseGrant: grant,
     priceNeed: Math.max(0, input.propertyPrice - grant),
     renovationNeed: Math.max(0, input.renovationBudget - modernizationGrant),
-    bankOffer: cheapestOffer(settings.offers, (offer) => offer.kind !== 'OTTHON_START'),
-    otthonStartOffer: cheapestOffer(settings.offers, (offer) => offer.kind === 'OTTHON_START')
+    bankOffer: cheapestBankOffer(input, settings),
+    otthonStartOffer: settings.offers
+      .filter((offer) => offer.enabled && offer.kind === 'OTTHON_START')
+      .toSorted((a, b) => a.annualRate - b.annualRate)[0]
   };
   const loanPrograms = LOAN_PROGRAMS.filter((program) => maxAmount(program) > 0);
   const csokPluszFloor = csokPluszForgivenessFloor(context);
@@ -129,17 +133,12 @@ export const buildPlan = (
         )
       )
     );
-  const [
-    best = evaluate(context, {
-      programs: [],
-      ownFundsFirst: input.ownFunds,
-      csokPluszCap: Infinity
-    })
-  ] = candidates
+  // `arrangements` always yields the empty set, so there is at least one candidate.
+  const [best] = candidates
     .map((candidate) =>
       candidate.ownFundsFirst === 0 ? withinJtm(context, candidate) : evaluate(context, candidate)
     )
-    .toSorted(compareEvaluations);
+    .toSorted(compareEvaluations) as [Evaluation, ...Evaluation[]];
   return {
     ...best.plan,
     marriage: input.plannedMarriageMonth ? marriageOutlook(context, best) : undefined
@@ -155,7 +154,6 @@ const marriedAt = (input: HouseholdInput, month: string): HouseholdInput => {
     ...input,
     relationship: 'MARRIED',
     applicantAge: input.applicantAge + years,
-    partnerAge: input.partnerAge + years,
     childrenBirthMonths: [...input.childrenBirthMonths, ...born],
     plannedChildrenMonths: input.plannedChildrenMonths.filter((birth) => birth >= month),
     startMonth: month,
@@ -274,7 +272,9 @@ const withinJtm = (context: Context, candidate: Candidate): Evaluation => {
     if (fitsJtm(evaluateWith(middle))) high = middle;
     else low = middle;
   }
-  return evaluateWith(Math.ceil(high / AMOUNT_SEARCH_STEP) * AMOUNT_SEARCH_STEP);
+  return evaluateWith(
+    Math.min(context.input.ownFunds, Math.ceil(high / AMOUNT_SEARCH_STEP) * AMOUNT_SEARCH_STEP)
+  );
 };
 
 type Context = {
@@ -306,7 +306,10 @@ const evaluate = (context: Context, candidate: Candidate): Evaluation => {
   const { input, settings } = context;
   const { programs } = candidate;
   const loansFirst = candidate.ownFundsFirst < input.ownFunds;
-  const loanToValue = input.firstHome ? MNB_LIMITS.firstBuyerLoanToValue : MNB_LIMITS.loanToValue;
+  const loanToValue =
+    input.firstHome || input.energyEfficient
+      ? Math.max(MNB_LIMITS.firstBuyerLoanToValue, MNB_LIMITS.green.loanToValue)
+      : MNB_LIMITS.loanToValue;
   let mortgageRoom = input.propertyPrice * loanToValue;
   let ownFunds = input.ownFunds;
   let freeExtra = 0;
@@ -325,6 +328,13 @@ const evaluate = (context: Context, candidate: Candidate): Evaluation => {
       taken += amount;
     }
     return taken;
+  };
+  const coverable = (purposes: readonly LoanPurpose[]): number => {
+    return sum(
+      Object.entries(needs).map(([purpose, need]) =>
+        purposes.includes(purpose as LoanPurpose) ? need : 0
+      )
+    );
   };
   const useOwnFunds = (limit: number) => {
     ownFunds -= cover(BANK_LOAN_PURPOSES, Math.max(0, Math.min(ownFunds, limit)));
@@ -351,6 +361,13 @@ const evaluate = (context: Context, candidate: Candidate): Evaluation => {
       program === GOV_PROGRAM.CSOK_PLUSZ ? candidate.csokPluszCap : Infinity,
       isMortgage ? mortgageRoom : Infinity
     );
+    // Below its minimum CSOK Plusz is not disbursed, cheaper money covers the need instead.
+    if (
+      program === GOV_PROGRAM.CSOK_PLUSZ &&
+      Math.min(cap, coverable(purposes)) < CSOK_PLUSZ.minAmount
+    ) {
+      continue;
+    }
     let amount = cover(purposes, cap);
     // Free-use money beyond the need is kept and invested, but only when borrowing beats own funds.
     if (loansFirst && purposes.includes('FREE')) {
@@ -373,7 +390,7 @@ const evaluate = (context: Context, candidate: Candidate): Evaluation => {
   const remaining = uncovered + downPaymentGap;
   const cashKept = ownFunds + freeExtra;
 
-  addMortgageForgiveness(input, tranches);
+  addMortgageForgiveness(input, tranches, context.grant > 0);
 
   const schedule = buildSchedule(tranches, {
     discountRate: settings.bondYield,
@@ -381,8 +398,15 @@ const evaluate = (context: Context, candidate: Candidate): Evaluation => {
   });
   const paymentToIncomeLimit = jtmLimit(input, tranches);
   const paymentToIncome =
-    input.netIncome > 0 ? schedule.initialMonthly / input.netIncome : Infinity;
-  const exemptPrograms = context.grant > 0 ? [...programs, GOV_PROGRAM.FALUSI_CSOK] : programs;
+    schedule.regularMonthly === 0
+      ? 0
+      : input.netIncome > 0
+        ? schedule.regularMonthly / input.netIncome
+        : Infinity;
+  // Only programs actually disbursed exempt the purchase from stamp duty.
+  const usedPrograms = tranches.map((tranche) => tranche.id as GovProgram);
+  const exemptPrograms =
+    context.grant > 0 ? [...usedPrograms, GOV_PROGRAM.FALUSI_CSOK] : usedPrograms;
 
   return {
     shortfall: remaining,
@@ -433,6 +457,18 @@ const evaluate = (context: Context, candidate: Candidate): Evaluation => {
         ...(settings.babavaroAsDownPayment && tranches.some(({ id }) => id === GOV_PROGRAM.BABAVARO)
           ? ['A Babaváró önerőként való elfogadása bankfüggő']
           : []),
+        ...(tranches.some(
+          ({ id, events }) =>
+            id === GOV_PROGRAM.BABAVARO && events.some(({ type }) => type === 'charge')
+        )
+          ? [
+              `Gyermek nélkül a Babaváró ${BABAVARO.firstChildDeadlineYears} év után drága: egyszeri visszafizetés és ${formatPercent(BABAVARO.noChildRate)} kamat (benne van a számításban)`
+            ]
+          : []),
+        ...(tranches.some(({ id }) => id === GOV_PROGRAM.OTTHON_START) &&
+        input.startMonth >= OTTHON_START.reviewFrom
+          ? ['Az Otthon Start feltételei 2027-től szigorodhatnak, a szerződés előtt ellenőrizd']
+          : []),
         ...(uncovered > 0 && !context.bankOffer
           ? ['Nincs bekapcsolt banki ajánlat a kiegészítő hitelhez']
           : [])
@@ -451,18 +487,15 @@ const govTranche = (context: Context, program: GovProgram, amount: number): Plan
   const base = { id: program, principal: amount, isBank: false, fixationYears: FIXED_FOR_TERM };
 
   if (program === GOV_PROGRAM.BABAVARO) {
-    const minMonths = Math.ceil(amount / BABAVARO.maxMonthlyPayment);
     return {
       ...base,
       name: BABAVARO.name,
-      annualRate: BABAVARO.annualRate,
-      termMonths: clamp(
-        minMonths,
-        BABAVARO.minTermYears * MONTHS_PER_YEAR,
-        BABAVARO.maxTermYears * MONTHS_PER_YEAR
-      ),
-      events: babavaroEvents(input),
-      note: `Kamatmentes, gyermekenként ${BABAVARO.suspensionMonthsPerChild / MONTHS_PER_YEAR} év szüneteltetés, a 2. gyermeknél ${formatPercent(BABAVARO.forgivenessRateByChild[2] ?? 0)}, a 3.-nál teljes elengedés`
+      // Interest free, but the guarantee fee works like a rate on the balance.
+      annualRate: BABAVARO.annualRate + BABAVARO.guaranteeFeeRate,
+      // Nearly free money, so the longest term is cheapest and keeps the installment under its cap.
+      termMonths: BABAVARO.maxTermYears * MONTHS_PER_YEAR,
+      events: babavaroEvents(input, amount),
+      note: `Kamatmentes, évi ${formatPercent(BABAVARO.guaranteeFeeRate)} kezességvállalási díj, gyermekenként ${BABAVARO.suspensionMonthsPerChild / MONTHS_PER_YEAR} év szüneteltetés, a 2. gyermeknél ${formatPercent(BABAVARO.forgivenessRateByChild[2] ?? 0)}, a 3.-nál teljes elengedés`
     };
   }
 
@@ -476,8 +509,9 @@ const govTranche = (context: Context, program: GovProgram, amount: number): Plan
         CSOK_PLUSZ.minTermYears * MONTHS_PER_YEAR,
         CSOK_PLUSZ.maxTermYears * MONTHS_PER_YEAR
       ),
+      interestOnlyMonths: CSOK_PLUSZ.interestOnlyMonths,
       events: csokPluszEvents(input),
-      note: `Fix ${formatPercent(csokPluszRate)}, a ${CSOK_PLUSZ.forgivenessFromChildOrder}. gyermektől gyermekenként ${formatMillions(CSOK_PLUSZ.forgivenessPerChild)} elengedés`
+      note: `Fix ${formatPercent(csokPluszRate)}, az első ${CSOK_PLUSZ.interestOnlyMonths} hónapban csak kamat, a szerződés után született ${CSOK_PLUSZ.forgivenessFromChildOrder}. gyermektől gyermekenként ${formatMillions(CSOK_PLUSZ.forgivenessPerChild)} elengedés`
     };
   }
 
@@ -536,7 +570,33 @@ const csokPluszForgivenessFloor = (context: Context): number => {
 };
 
 // Babaváró counts only children born after disbursement.
-const babavaroEvents = (input: HouseholdInput): LoanEvent[] => {
+const babavaroEvents = (input: HouseholdInput, amount: number): LoanEvent[] => {
+  const deadline = BABAVARO.firstChildDeadlineYears * MONTHS_PER_YEAR;
+  const childInTime = input.pregnant || birthsAfterStart(input).some((month) => month <= deadline);
+  // No child in time: the subsidy ends, the past interest is charged at once and the rate jumps.
+  const noChild: LoanEvent[] = childInTime
+    ? []
+    : [
+        {
+          month: deadline,
+          type: 'charge',
+          amount:
+            amount *
+            (MNB_BASE_RATE + BABAVARO.noChildChargeOverBaseRate) *
+            BABAVARO.firstChildDeadlineYears,
+          reason: 'Nincs gyermek 5 éven belül: a kamattámogatás visszafizetése'
+        },
+        {
+          month: deadline,
+          type: 'reprice',
+          annualRate: BABAVARO.noChildRate,
+          reason: `Nincs gyermek 5 éven belül: kamatozóvá válik (${formatPercent(BABAVARO.noChildRate)})`
+        }
+      ];
+  return [...noChild, ...babavaroChildEvents(input)];
+};
+
+const babavaroChildEvents = (input: HouseholdInput): LoanEvent[] => {
   return birthsAfterStart(input)
     .slice(0, MAX_COUNTED_CHILDREN)
     .flatMap((month, index): LoanEvent[] => {
@@ -561,6 +621,7 @@ const babavaroEvents = (input: HouseholdInput): LoanEvent[] => {
                 type: 'suspend',
                 months: BABAVARO.suspensionMonthsPerChild,
                 optional: true,
+                accrues: false,
                 reason: `${order}. gyermek: szüneteltetés ${BABAVARO.suspensionMonthsPerChild / MONTHS_PER_YEAR} évre`
               }
             ]
@@ -569,11 +630,11 @@ const babavaroEvents = (input: HouseholdInput): LoanEvent[] => {
     });
 };
 
-// CSOK Plusz counts every child for the order, but only births after the contract trigger events.
+// Only children born after the application count for the order (46. § (1)); the pause starts after
+// the interest only first year at the earliest (45. § (2)).
 const csokPluszEvents = (input: HouseholdInput): LoanEvent[] => {
-  const existing = input.childrenBirthMonths.length;
   return birthsAfterStart(input).map((month, index): LoanEvent => {
-    const order = existing + index + 1;
+    const order = index + 1;
     if (order >= CSOK_PLUSZ.forgivenessFromChildOrder) {
       return {
         month,
@@ -583,7 +644,7 @@ const csokPluszEvents = (input: HouseholdInput): LoanEvent[] => {
       };
     }
     return {
-      month,
+      month: Math.max(month, CSOK_PLUSZ.interestOnlyMonths),
       type: 'suspend',
       months: CSOK_PLUSZ.firstChildSuspensionMonths,
       optional: true,
@@ -592,7 +653,11 @@ const csokPluszEvents = (input: HouseholdInput): LoanEvent[] => {
   });
 };
 
-const bankTranche = (context: Context, amount: number, offer: OfferSetting): PlanTranche => {
+const bankTranche = (
+  context: Pick<Context, 'input' | 'settings'>,
+  amount: number,
+  offer: OfferSetting
+): PlanTranche => {
   const { repriceRate } = context.settings;
   const termMonths = context.input.termYears * MONTHS_PER_YEAR;
   const fixationMonths =
@@ -624,18 +689,32 @@ const bankTranche = (context: Context, amount: number, offer: OfferSetting): Pla
   };
 };
 
-// Applied to the subsidized mortgage first; Babaváró is not a mortgage. A child that triggers CSOK Plusz
-// forgiveness cannot also reduce another mortgage (?), and CSOK Plusz forgives every child from the 2nd.
-const addMortgageForgiveness = (input: HouseholdInput, tranches: PlanTranche[]): void => {
-  if (tranches.some((tranche) => tranche.id === GOV_PROGRAM.CSOK_PLUSZ)) return;
-  const target =
-    tranches.find((tranche) => tranche.id === GOV_PROGRAM.OTTHON_START) ??
-    tranches.find((tranche) => tranche.isBank) ??
-    tranches.find((tranche) => tranche.id === GOV_PROGRAM.FALUSI_CSOK_LOAN);
+// Child benefits that prepay the dearest mortgage. Jelzáloghitel-elengedés: every planned child is born
+// after the application, the order counts all children, and a child already getting the CSOK Plusz 10M
+// gets nothing. Falusi CSOK: 1M for each child the grant did not count; it stacks with the former.
+const addMortgageForgiveness = (
+  input: HouseholdInput,
+  tranches: PlanTranche[],
+  hasFalusiCsok: boolean
+): void => {
+  const target = tranches
+    .filter((tranche) => tranche.id !== GOV_PROGRAM.BABAVARO)
+    .toSorted((a, b) => b.annualRate - a.annualRate)[0];
   if (!target) return;
+  const hasCsokPlusz = tranches.some((tranche) => tranche.id === GOV_PROGRAM.CSOK_PLUSZ);
   const existing = input.childrenBirthMonths.length;
+  const grantChildren = falusiCsokChildren(input).promised;
   birthsAfterStart(input).forEach((month, index) => {
     const order = existing + index + 1;
+    if (hasFalusiCsok && index >= grantChildren) {
+      target.events.push({
+        month,
+        type: 'forgive',
+        amount: FALUSI_CSOK.laterChildBonus,
+        reason: `${order}. gyermek: falusi CSOK utólagos támogatás (${formatMillions(FALUSI_CSOK.laterChildBonus)})`
+      });
+    }
+    if (hasCsokPlusz && index + 1 >= CSOK_PLUSZ.forgivenessFromChildOrder) return;
     const amount =
       MORTGAGE_FORGIVENESS.amountByChildOrder[order] ?? MORTGAGE_FORGIVENESS.amountForFurtherChild;
     if (amount === 0) return;
@@ -666,19 +745,35 @@ const jtmLimit = (input: HouseholdInput, tranches: PlanTranche[]): number => {
       : fixation < MNB_LIMITS.fixationYears.long
         ? 'FROM_5_TO_10_YEARS'
         : 'FROM_10_YEARS';
-  return MNB_LIMITS.paymentToIncomeByFixation[row][column];
+  const limit = MNB_LIMITS.paymentToIncomeByFixation[row][column];
+  return input.energyEfficient && row === 'FROM_10_YEARS'
+    ? Math.max(limit, MNB_LIMITS.green.paymentToIncome)
+    : limit;
 };
 
+// The buyer claims whichever relief is cheapest: the young first-home one, the new-home one, or the
+// home swap (proving a sale rules out the new-home relief, so they never stack).
 const stampDuty = (input: HouseholdInput, programs: GovProgram[]): number => {
   const exemptWith: readonly GovProgram[] = STAMP_DUTY.exemptWith;
   if (programs.some((program) => exemptWith.includes(program))) return 0;
-  if (
-    input.propertyCondition === 'NEW' &&
+  const { ageBelow, maxValue, reduction } = STAMP_DUTY.youngFirstHome;
+  const young = input.firstHome && input.applicantAge < ageBelow && input.propertyPrice <= maxValue;
+  const swap =
+    input.soldHomeValue > 0
+      ? Math.max(0, input.propertyPrice - input.soldHomeValue) * STAMP_DUTY.rate
+      : Infinity;
+  return Math.min(
+    input.propertyPrice * STAMP_DUTY.rate * (young ? 1 - reduction : 1),
+    newHome(input),
+    swap
+  );
+};
+
+const newHome = (input: HouseholdInput): number => {
+  return input.propertyCondition === 'NEW' &&
     input.propertyPrice <= STAMP_DUTY.newHomeExemptionMaxValue
-  ) {
-    return Math.max(0, input.propertyPrice - STAMP_DUTY.newHomeExemptUpTo) * STAMP_DUTY.rate;
-  }
-  return input.propertyPrice * STAMP_DUTY.rate;
+    ? Math.max(0, input.propertyPrice - STAMP_DUTY.newHomeExemptUpTo) * STAMP_DUTY.rate
+    : Infinity;
 };
 
 // One item per loan and topic, the details listed under it:
@@ -747,13 +842,21 @@ const tips = (
   return [...invest, ...pauses, ...keep, ...renovation];
 };
 
-const cheapestOffer = (
-  offers: OfferSetting[],
-  matches: (offer: OfferSetting) => boolean
+// Ranked by present value, not headline rate: a short fixation reprices to the market rate later.
+// ponytail: ignores the JTM band a short fixation implies, a candidate per offer if that matters.
+const cheapestBankOffer = (
+  input: HouseholdInput,
+  settings: PlanSettings
 ): OfferSetting | undefined => {
-  return offers
-    .filter((offer) => offer.enabled && matches(offer))
-    .toSorted((a, b) => a.annualRate - b.annualRate)[0];
+  const rates = { discountRate: settings.bondYield, inflationRate: settings.inflationRate };
+  // Present value is linear in the principal, so one forint compares offers.
+  const cost = (offer: OfferSetting): number => {
+    return buildSchedule([bankTranche({ input, settings }, 1, offer)], rates).presentValue;
+  };
+  return settings.offers
+    .filter((offer) => offer.enabled && offer.kind !== 'OTTHON_START')
+    .map((offer) => ({ offer, cost: cost(offer) }))
+    .toSorted((a, b) => a.cost - b.cost)[0]?.offer;
 };
 
 const investmentReturn = (amount: number, annualRate: number, years: number) => {

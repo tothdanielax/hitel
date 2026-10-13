@@ -1,12 +1,22 @@
 import { BALANCE_EPSILON, MONTHS_PER_YEAR } from './constants';
 import { subsets, sum } from './utils/math';
 export type LoanEvent =
-  | { month: number; type: 'suspend'; months: number; optional: boolean; reason: string }
+  // `accrues: false` when nothing is charged during the pause (Babaváró's guarantee fee).
+  | {
+      month: number;
+      type: 'suspend';
+      months: number;
+      optional: boolean;
+      accrues?: boolean;
+      reason: string;
+    }
   | { month: number; type: 'forgive'; amount: number; reason: string }
   | { month: number; type: 'forgiveShare'; share: number; reason: string }
   | { month: number; type: 'reprice'; annualRate: number; reason: string }
   // Paid down from other money (e.g. a later Babaváró): lowers the balance, is neither paid nor forgiven here.
-  | { month: number; type: 'prepay'; amount: number; reason: string };
+  | { month: number; type: 'prepay'; amount: number; reason: string }
+  // A one-off payment on top of the installment (e.g. a subsidy paid back), the balance is unchanged.
+  | { month: number; type: 'charge'; amount: number; reason: string };
 
 export type Tranche = {
   id: string;
@@ -16,6 +26,8 @@ export type Tranche = {
   termMonths: number;
   // Months after the plan start when the loan is disbursed (0 = at the start).
   startMonth?: number;
+  // Interest only at first, the principal is repaid over the rest of the term.
+  interestOnlyMonths?: number;
   events: LoanEvent[];
 };
 
@@ -33,6 +45,8 @@ type TrancheSchedule = {
   totalForgiven: number;
   totalPrepaid: number;
   initialPayment: number;
+  // The full installment without grace or pauses, what lenders test against income.
+  regularPayment: number;
 };
 
 export type Schedule = {
@@ -41,6 +55,7 @@ export type Schedule = {
   totalPaid: number;
   totalForgiven: number;
   initialMonthly: number;
+  regularMonthly: number;
   averageMonthly: number;
   presentValue: number;
   realTotalPaid: number;
@@ -53,7 +68,7 @@ type Rates = {
   inflationRate: number;
 };
 
-export const PAUSE_END_REASON = 'szüneteltetés vége, a törlesztés újraindul';
+const PAUSE_END_REASON = 'szüneteltetés vége, a törlesztés újraindul';
 
 export const buildSchedule = (tranches: Tranche[], rates: Rates): Schedule => {
   const chosen = tranches.map((tranche) =>
@@ -66,7 +81,7 @@ export const buildSchedule = (tranches: Tranche[], rates: Rates): Schedule => {
   );
   const totalPaid = sum(monthlyTotals);
   const timeline = chosen
-    .flatMap((tranche) =>
+    .flatMap((tranche, index) =>
       tranche.events.flatMap((event) => {
         const entry = {
           month: event.month,
@@ -81,7 +96,9 @@ export const buildSchedule = (tranches: Tranche[], rates: Rates): Schedule => {
           (other) =>
             other.type === 'suspend' && other.month > event.month && other.month <= resumeMonth
         );
-        if (extended) return [entry];
+        // No restart for a pause that outlasts the loan (forgiven in full meanwhile).
+        const endsFirst = (schedules[index]?.payments.length ?? 0) <= resumeMonth;
+        if (extended || endsFirst) return [entry];
         const resume = {
           month: resumeMonth,
           loan: tranche.name,
@@ -99,6 +116,7 @@ export const buildSchedule = (tranches: Tranche[], rates: Rates): Schedule => {
     totalPaid,
     totalForgiven: sum(schedules.map((schedule) => schedule.totalForgiven)),
     initialMonthly: monthlyTotals[0] ?? 0,
+    regularMonthly: sum(schedules.map((schedule) => schedule.regularPayment)),
     averageMonthly: length === 0 ? 0 : totalPaid / length,
     presentValue: presentValue(monthlyTotals, rates.discountRate),
     realTotalPaid: presentValue(monthlyTotals, rates.inflationRate),
@@ -137,14 +155,20 @@ const simulateTranche = (tranche: Tranche): TrancheSchedule => {
   let rate = tranche.annualRate;
   let remaining = tranche.termMonths;
   let payment = annuity(balance, rate, remaining);
+  const interestOnlyUntil = start + (tranche.interestOnlyMonths ?? 0);
   let suspendedUntil = -1;
+  let accrues = true;
   let totalForgiven = 0;
   let totalPrepaid = 0;
+  let charged = 0;
 
   for (let month = start; balance > BALANCE_EPSILON && remaining > 0; month++) {
     const events = tranche.events.filter((event) => event.month === month);
     for (const event of events) {
-      if (event.type === 'suspend') suspendedUntil = month + event.months;
+      if (event.type === 'suspend') {
+        suspendedUntil = month + event.months;
+        accrues = event.accrues ?? true;
+      }
       if (event.type === 'forgive') {
         const forgiven = Math.min(balance, event.amount);
         balance -= forgiven;
@@ -155,26 +179,32 @@ const simulateTranche = (tranche: Tranche): TrancheSchedule => {
         balance -= balance * event.share;
       }
       if (event.type === 'reprice') rate = event.annualRate;
+      if (event.type === 'charge') charged += event.amount;
       if (event.type === 'prepay') {
         const prepaid = Math.min(balance, event.amount);
         balance -= prepaid;
         totalPrepaid += prepaid;
       }
     }
-    if (events.length > 0 || month === suspendedUntil) payment = annuity(balance, rate, remaining);
+    // Forgiven in full (e.g. Babaváró at the 3rd child): the loan ends now, even during a pause.
+    if (balance <= BALANCE_EPSILON) break;
+    if (events.length > 0 || month === suspendedUntil || month === interestOnlyUntil) {
+      payment = annuity(balance, rate, remaining);
+    }
 
     if (month < suspendedUntil) {
-      balance += (balance * rate) / MONTHS_PER_YEAR;
-      payments.push(0);
+      if (accrues) balance += (balance * rate) / MONTHS_PER_YEAR;
+      payments.push(charged);
+      charged = 0;
       continue;
     }
-    if (balance <= BALANCE_EPSILON) break;
 
     const interest = (balance * rate) / MONTHS_PER_YEAR;
-    const due = Math.min(payment, balance + interest);
+    const due = month < interestOnlyUntil ? interest : Math.min(payment, balance + interest);
     balance = balance + interest - due;
     remaining--;
-    payments.push(due);
+    payments.push(due + charged);
+    charged = 0;
   }
 
   return {
@@ -183,7 +213,8 @@ const simulateTranche = (tranche: Tranche): TrancheSchedule => {
     totalPaid: sum(payments),
     totalForgiven,
     totalPrepaid,
-    initialPayment: payments[start] ?? 0
+    initialPayment: payments[start] ?? 0,
+    regularPayment: annuity(tranche.principal, tranche.annualRate, tranche.termMonths)
   };
 };
 

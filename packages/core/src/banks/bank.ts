@@ -1,6 +1,6 @@
 type OfferKind = 'MARKET' | 'MFL' | 'OTTHON_START';
 
-export type OfferSource = {
+type OfferSource = {
   url: string;
   asOf: string;
 };

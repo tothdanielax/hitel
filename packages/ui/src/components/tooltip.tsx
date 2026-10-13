@@ -1,7 +1,7 @@
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip';
 import { cn } from 'cn';
-import { createContext, use, type ComponentProps } from 'react';
+import { createContext, use, type ComponentProps, type ReactElement } from 'react';
 import { useHasHover } from '../hooks/use-has-hover';
 
 const HasHoverContext = createContext(true);
@@ -25,10 +25,16 @@ function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
   );
 }
 
-// Plain button props: both primitives accept them, unlike their own handle and render props.
-function TooltipTrigger({ ...props }: ComponentProps<'button'>) {
-  const Trigger = use(HasHoverContext) ? TooltipPrimitive.Trigger : PopoverPrimitive.Trigger;
-  return <Trigger data-slot='tooltip-trigger' {...props} />;
+// Plain button props plus an element `render`: the only shape both primitives accept.
+function TooltipTrigger({
+  nativeButton,
+  ...props
+}: ComponentProps<'button'> & { render?: ReactElement; nativeButton?: boolean }) {
+  return use(HasHoverContext) ? (
+    <TooltipPrimitive.Trigger data-slot='tooltip-trigger' {...props} />
+  ) : (
+    <PopoverPrimitive.Trigger data-slot='tooltip-trigger' nativeButton={nativeButton} {...props} />
+  );
 }
 
 function TooltipContent({

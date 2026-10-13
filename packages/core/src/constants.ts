@@ -1,6 +1,7 @@
-// Source of truth: docs/gov-loans.md (status 2026-10-04). Re-check Magyar Közlöny before changing.
+// Every rule number lives here, research and sources: docs/gov-loans.md.
+// Re-check Magyar Közlöny before changing.
 
-export const RULES_AS_OF = '2026-10-04';
+export const RULES_AS_OF = '2026-10-13';
 
 export const GOV_PROGRAM = {
   OTTHON_START: 'OTTHON_START',
@@ -21,10 +22,10 @@ export const MILLION = 1_000_000;
 export const ISO_MONTH_LENGTH = 7;
 export const ISO_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-// Remaining balance treated as fully repaid, absorbs floating point rounding.
 // Loan amounts the planner searches are rounded to this.
 export const AMOUNT_SEARCH_STEP = 100_000;
 
+// Remaining balance treated as fully repaid, absorbs floating point rounding.
 export const BALANCE_EPSILON = 0.5;
 
 export const OTTHON_START = {
@@ -41,6 +42,8 @@ export const OTTHON_START = {
   priorOwnershipLookbackYears: 10,
   priorOwnershipMaxShare: 0.5,
   priorPropertyIgnoredBelow: 15_000_000,
+  // Government review in progress, tighter rules expected for contracts from 2027 (nothing published yet).
+  reviewFrom: '2027-01',
   requiresMarriage: false,
   requiresCleanRecord: true
 } as const;
@@ -50,9 +53,11 @@ export const CSOK_PLUSZ = {
   name: 'CSOK Plusz',
   legalBasis: '518/2023. (XI. 30.) Korm. rendelet',
   maxAmountByChildren: [0, 15_000_000, 30_000_000, 50_000_000],
-  // Bank sources (?).
-  minAmount: 2_500_000,
+  // The decree sets none: OTP's 500k is the lowest bank minimum.
+  minAmount: 500_000,
   annualRate: 0.03,
+  // 12. § (2): principal is repaid from the 13th month, the first year is interest only.
+  interestOnlyMonths: 12,
   minTermYears: 10,
   maxTermYears: 25,
   wifeAgeBelow: 41,
@@ -69,7 +74,7 @@ export const CSOK_PLUSZ = {
   childDeadlineYearsByPromised: [0, 4, 8, 10],
   firstChildSuspensionMonths: 12,
   forgivenessPerChild: 10_000_000,
-  // Child order counts all children; only births after the contract qualify.
+  // 46. § (1): the order counts only children born after the application.
   forgivenessFromChildOrder: 2,
   requiresMarriage: true,
   requiresCleanRecord: true
@@ -80,6 +85,8 @@ export const BABAVARO = {
   legalBasis: '44/2019. (III. 12.) Korm. rendelet',
   maxAmount: 11_000_000,
   annualRate: 0,
+  // 18. §: 0.5% a year guarantee fee on the balance, part of the 51k cap, not charged during a pause.
+  guaranteeFeeRate: 0.005,
   maxMonthlyPayment: 51_000,
   minTermYears: 5,
   maxTermYears: 20,
@@ -87,6 +94,10 @@ export const BABAVARO = {
   wifeAgeBelow: 35,
   minInsuredYears: 3,
   firstChildDeadlineYears: 5,
+  // 15. § (10): no child in time, the rate rises to at most ÁKK 5 year yield x 130% + 4 pp
+  // (5.28% for Oct 2026, OTP), and 15. § (1) charges alapkamat + 3 pp on the amount for the period.
+  noChildRate: 0.1086,
+  noChildChargeOverBaseRate: 0.03,
   suspensionMonthsPerChild: 36,
   // Child order counts only children born after disbursement.
   suspendingChildren: [1, 2],
@@ -101,10 +112,13 @@ export const FALUSI_CSOK = {
   legalBasis: '302/2023. (VII. 11.) Korm. rendelet',
   grantByChildren: [0, 1_000_000, 4_000_000, 15_000_000],
   usedPurchaseMaxShareForPrice: 0.5,
+  // 23. §: each child born later and not counted in the grant prepays a housing loan with 1M.
+  laterChildBonus: 1_000_000,
   wifeAgeBelow: 41,
   minInsuredYears: 2,
   minFloorAreaByChildren: CSOK_PLUSZ.minFloorAreaByChildren,
-  requiresMarriage: true,
+  // 2. § (2), 11. § (3): partners and single parents too, but promised children count only for a married couple.
+  requiresMarriage: false,
   requiresCleanRecord: true
 } as const;
 
@@ -114,11 +128,13 @@ export const FALUSI_CSOK_LOAN = {
   maxAmountByChildren: [0, 0, 10_000_000, 15_000_000],
   annualRate: 0.03,
   maxTermYears: 25,
-  requiresMarriage: true,
+  // 53. §: follows the grant (2 or more children), so whoever gets that grant.
+  requiresMarriage: false,
   requiresCleanRecord: true
 } as const;
 
-// Applies to housing mortgages contracted before the birth, never to Babaváró.
+// 337/2017.: any housing mortgage applied for before the birth (CSOK Plusz too), never Babaváró. One
+// benefit per child: a child that gets the CSOK Plusz 10M forgiveness gets nothing here.
 export const MORTGAGE_FORGIVENESS = {
   name: 'Jelzáloghitel-elengedés',
   legalBasis: '337/2017. (XI. 14.) Korm. rendelet',
@@ -138,7 +154,9 @@ export const MNB_LIMITS = {
     FROM_10_YEARS: [0.5, 0.6]
   },
   loanToValue: 0.8,
-  firstBuyerLoanToValue: 0.9
+  firstBuyerLoanToValue: 0.9,
+  // 3. § (1c), 6. § (4a): energy class A+ (at most 68 kWh/m²/year), fixed for 10+ years.
+  green: { loanToValue: 0.9, paymentToIncome: 0.6 }
 } as const;
 
 export const STAMP_DUTY = {
@@ -146,6 +164,9 @@ export const STAMP_DUTY = {
   rate: 0.04,
   newHomeExemptUpTo: 15_000_000,
   newHomeExemptionMaxValue: 30_000_000,
+  // Itv. 21. § (2) b), 26. § (1) y): selling the previous home lowers the base by its value.
+  // Itv. 26. § (6): up to half the duty on a first home of at most 15M bought under 35.
+  youngFirstHome: { ageBelow: 35, maxValue: 15_000_000, reduction: 0.5 },
   exemptWith: [GOV_PROGRAM.CSOK_PLUSZ, GOV_PROGRAM.FALUSI_CSOK]
 } as const;
 
@@ -183,7 +204,6 @@ export const LOAN_PROGRAMS: GovProgram[] = [
   GOV_PROGRAM.FALUSI_CSOK_LOAN
 ];
 
-// Pairs that cannot be used together. Unclear pairs from docs/gov-loans.md are treated as not allowed.
 // Programs the user may rule out (already used once, or simply not wanted).
 export const EXCLUDABLE_PROGRAMS: GovProgram[] = [
   GOV_PROGRAM.OTTHON_START,
@@ -193,15 +213,16 @@ export const EXCLUDABLE_PROGRAMS: GovProgram[] = [
   GOV_PROGRAM.FALUSI_CSOK_LOAN
 ];
 
+// Pairs that cannot be used together.
 export const INCOMPATIBLE_PROGRAMS: readonly (readonly [GovProgram, GovProgram])[] = [
-  [GOV_PROGRAM.CSOK_PLUSZ, GOV_PROGRAM.FALUSI_CSOK_LOAN],
-  [GOV_PROGRAM.OTTHON_START, GOV_PROGRAM.FALUSI_CSOK_LOAN]
+  // 302/2023. 53. § (15). Otthon Start goes with either (227/2025. 9. § (5) c)).
+  [GOV_PROGRAM.CSOK_PLUSZ, GOV_PROGRAM.FALUSI_CSOK_LOAN]
 ];
 
-// Market rate after a bank loan's fixation ends: ECB MIR, HU new housing loans, all fixations, Aug 2026.
 // Early repayment fee: Otthon Start caps it at 1%, consumer mortgages at 1-2% (?).
 export const PREPAYMENT_FEE_RATE = 0.01;
 
+// Market rate after a bank loan's fixation ends: ECB MIR, HU new housing loans, all fixations, Aug 2026.
 export const DEFAULT_REPRICE_RATE = 0.0715;
 
 export const MAX_COUNTED_CHILDREN = 3;
@@ -209,6 +230,9 @@ export const MAX_COUNTED_CHILDREN = 3;
 export const TERM_YEARS = { min: 5, max: 35 } as const;
 
 // MÁP Plusz 2031/M6 average yield (5.00-6.00%, tax free), allampapirkalkulator.hu, 2026-10.
+// MNB alapkamat since 2026-08-26.
+export const MNB_BASE_RATE = 0.055;
+
 export const DEFAULT_BOND_YIELD = 0.0548;
 
 // MNB long-term inflation target from 2028 (Inflációs jelentés 2026 szeptember).

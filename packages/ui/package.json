@@ -12,7 +12,7 @@
     "add": "vp dlx shadcn@latest add"
   },
   "dependencies": {
-    "@base-ui/react": "^1.8.0",
+    "@base-ui/react": "^1.9.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "date-fns": "^4.4.0",
@@ -25,7 +25,7 @@
   "devDependencies": {
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "shadcn": "^4.21.1",
+    "shadcn": "^4.21.4",
     "tailwindcss": "catalog:"
   }
 }
